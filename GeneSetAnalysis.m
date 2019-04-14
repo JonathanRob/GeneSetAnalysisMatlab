@@ -1,4 +1,4 @@
-function [GSAres,gene_sets_proc] = GeneSetAnalysis( ...
+function [GSAres,gene_sets_proc] = geneSetAnalysis( ...
     genes,pvals,dirs,gene_sets,method,nperms,GS_size_bounds,stat_type)
 %GeneSetAnalysis  Perform a gene set analysis (GSA).
 %
@@ -437,21 +437,21 @@ if isnumeric(nperms)
     % calculate significance of test statistics and adjust p-values for FDR
     % Note: this needs to be performed differently for GSEA (INCOMPLETE)
     GS_pval_nondir = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_nondir(ismember(uniq_sizes,set_size),:) >= set_stat))/(nperms + 1),statvals_nondir,GSsizes);
-    GS_padj_nondir = adjust_pval(GS_pval_nondir,'benjamini',1);
+    GS_padj_nondir = adjust_pvalues(GS_pval_nondir,'benjamini',1);
     if ~isempty(dirs)
         GS_pval_mixup = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_mixup(ismember(uniq_sizes_mixup,set_size),:) >= set_stat))/(nperms + 1),statvals_mixup,GSsizes_mixup);
         GS_pval_mixdn = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_mixdn(ismember(uniq_sizes_mixdn,set_size),:) >= set_stat))/(nperms + 1),statvals_mixdn,GSsizes_mixdn);
         
-        GS_padj_mixup = adjust_pval(GS_pval_mixup,'benjamini',1);
-        GS_padj_mixdn = adjust_pval(GS_pval_mixdn,'benjamini',1);
+        GS_padj_mixup = adjust_pvalues(GS_pval_mixup,'benjamini',1);
+        GS_padj_mixdn = adjust_pvalues(GS_pval_mixdn,'benjamini',1);
     end
     
     if ismember(lower(method),{'stouffer','wilcoxon','mean','median','gsea'}) && ~isempty(dirs)
         GS_pval_distup = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_distup(ismember(uniq_sizes,set_size),:) >= set_stat))/(nperms + 1),statvals_distup,GSsizes);
         GS_pval_distdn = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_distdn(ismember(uniq_sizes,set_size),:) >= set_stat))/(nperms + 1),statvals_distdn,GSsizes);
         
-        GS_padj_distup = adjust_pval(GS_pval_distup,'benjamini',1);
-        GS_padj_distdn = adjust_pval(GS_pval_distdn,'benjamini',1);
+        GS_padj_distup = adjust_pvalues(GS_pval_distup,'benjamini',1);
+        GS_padj_distdn = adjust_pvalues(GS_pval_distdn,'benjamini',1);
     end
     
     if strcmpi(method,'reporter')
@@ -480,14 +480,14 @@ if isnumeric(nperms)
         end
         
         % calculate FDR-adjusted p-values
-        GS_padj_nondir = adjust_pval(GS_pval_nondir,'benjamini',1);
+        GS_padj_nondir = adjust_pvalues(GS_pval_nondir,'benjamini',1);
         
         if ~isempty(dirs)
-            GS_padj_mixup = adjust_pval(GS_pval_mixup,'benjamini',1);
-            GS_padj_mixdn = adjust_pval(GS_pval_mixdn,'benjamini',1);
+            GS_padj_mixup = adjust_pvalues(GS_pval_mixup,'benjamini',1);
+            GS_padj_mixdn = adjust_pvalues(GS_pval_mixdn,'benjamini',1);
             
-            GS_padj_distup = adjust_pval(GS_pval_distup,'benjamini',1);
-            GS_padj_distdn = adjust_pval(GS_pval_distdn,'benjamini',1);
+            GS_padj_distup = adjust_pvalues(GS_pval_distup,'benjamini',1);
+            GS_padj_distdn = adjust_pvalues(GS_pval_distdn,'benjamini',1);
         end
     end
     
@@ -502,34 +502,34 @@ elseif strcmpi(nperms,'nulldist')
             
             % calculate p-values based on the chi^2 distribution
             GS_pval_nondir = chi2cdf(statvals_nondir,GSsizes*2,'upper');
-            GS_padj_nondir = adjust_pval(GS_pval_nondir,'benjamini',1);
+            GS_padj_nondir = adjust_pvalues(GS_pval_nondir,'benjamini',1);
             
             if ~isempty(dirs)
                 GS_pval_mixup = chi2cdf(statvals_mixup,GSsizes_mixup*2,'upper');
                 GS_pval_mixdn = chi2cdf(statvals_mixdn,GSsizes_mixdn*2,'upper');
                 
-                GS_padj_mixup = adjust_pval(GS_pval_mixup,'benjamini',1);
-                GS_padj_mixdn = adjust_pval(GS_pval_mixdn,'benjamini',1);
+                GS_padj_mixup = adjust_pvalues(GS_pval_mixup,'benjamini',1);
+                GS_padj_mixdn = adjust_pvalues(GS_pval_mixdn,'benjamini',1);
             end
             
         case 'stouffer'
             
             % calculate p-values based on the normal distribution
             GS_pval_nondir = normcdf(statvals_nondir,'upper');
-            GS_padj_nondir = adjust_pval(GS_pval_nondir,'benjamini',1);
+            GS_padj_nondir = adjust_pvalues(GS_pval_nondir,'benjamini',1);
             
             if ~isempty(dirs)
                 GS_pval_distup = normcdf(statvals_distup,'upper');
                 GS_pval_distdn = normcdf(statvals_distdn,'upper');
                 
-                GS_padj_distup = adjust_pval(GS_pval_distup,'benjamini',1);
-                GS_padj_distdn = adjust_pval(GS_pval_distdn,'benjamini',1);
+                GS_padj_distup = adjust_pvalues(GS_pval_distup,'benjamini',1);
+                GS_padj_distdn = adjust_pvalues(GS_pval_distdn,'benjamini',1);
                 
                 GS_pval_mixup = normcdf(statvals_mixup,'upper');
                 GS_pval_mixdn = normcdf(statvals_mixdn,'upper');
                 
-                GS_padj_mixup = adjust_pval(GS_pval_mixup,'benjamini',1);
-                GS_padj_mixdn = adjust_pval(GS_pval_mixdn,'benjamini',1);
+                GS_padj_mixup = adjust_pvalues(GS_pval_mixup,'benjamini',1);
+                GS_padj_mixdn = adjust_pvalues(GS_pval_mixdn,'benjamini',1);
             end
             
    
