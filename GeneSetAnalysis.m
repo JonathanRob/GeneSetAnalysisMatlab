@@ -61,8 +61,14 @@ function [GSAres,gene_sets_proc] = geneSetAnalysis( ...
 %                           to indicate a greater score or "significance".
 %
 %
-% Jonathan Robinson, 2019-03-15
+% Output:
 %
+%   GSAres      A cell array containing the GSA results, including gene set
+%               names and sizes, and their associated p-values (raw and
+%               adjusted) for each of the relevant directionality classes.
+%
+%
+% Jonathan Robinson, 2019-04-14
 
 
 %% Handle input arguments
@@ -160,7 +166,8 @@ fprintf('Removed %u gene sets not satisfying size limits.\n',sum(ind));
 fprintf('Final number of gene sets remaining: %u\n',length(unique(gene_sets(:,1))));
 
 % handle duplicated gene names
-dup_genes = nonUnique(genes);  % find duplicated gene names
+[uGenes,freq_uGenes] = cellfreq(genes); 
+dup_genes = uGenes(freq_uGenes > 1);  % find duplicated gene names
 if ~isempty(dup_genes)
     fprintf('Handling duplicated gene names... ');
     for i = 1:length(dup_genes)
