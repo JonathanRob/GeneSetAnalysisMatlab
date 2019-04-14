@@ -1,6 +1,6 @@
 function [GSAres,gene_sets_proc] = geneSetAnalysis( ...
     genes,pvals,dirs,gene_sets,method,nperms,GS_size_bounds,stat_type)
-%GeneSetAnalysis  Perform a gene set analysis (GSA).
+%geneSetAnalysis  Perform a gene set analysis (GSA).
 %
 % Performs a GSA given gene-level statistics (pvals) and directionality
 % (dirs) for each gene, using gene sets defined by gene_sets and the
@@ -11,7 +11,7 @@ function [GSAres,gene_sets_proc] = geneSetAnalysis( ...
 %
 % Usage:
 %
-%   [GSAres,gene_sets_proc] = GeneSetAnalysis( ...
+%   [GSAres,gene_sets_proc] = geneSetAnalysis( ...
 %       genes,pvals,dirs,gene_sets,method,nperms,GS_size_bounds,stat_type);
 %
 %
