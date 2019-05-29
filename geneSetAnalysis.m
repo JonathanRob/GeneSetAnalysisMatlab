@@ -605,6 +605,14 @@ end
 
 %% Additional functions
 
+function [item,freq] = cellfreq(c)
+%Calculate the frequency of each item in a cell array.
+item = unique(c,'stable');  % determine unique items in C
+[~,c] = ismember(c,item);  % convert C to numeric values to increase speed
+edges = 0.5:1:(length(item)+0.5);  % define edges between each value of C
+freq = histcounts(c,edges)';  % count occurrence of each value of C
+end
+
 function s = fisher(p)
 % Fisher's method
 s = -2*sum(log(p),1);
