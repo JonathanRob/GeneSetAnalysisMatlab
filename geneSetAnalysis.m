@@ -68,7 +68,7 @@ function [GSAres,gene_sets_proc] = geneSetAnalysis( ...
 %               adjusted) for each of the relevant directionality classes.
 %
 %
-% Jonathan Robinson, 2019-04-14
+% Jonathan Robinson, 2019-11-05
 
 
 %% Handle input arguments
@@ -108,7 +108,6 @@ genes = genes(:);
 pvals = pvals(:);
 dirs = dirs(:);
 
-
 if strcmpi(stat_type,'p')
     % handle p-values equal to 0 or 1
     ind = pvals == 0;
@@ -127,7 +126,9 @@ end
 if ~isempty(dirs)
     % convert DIRS to +1, -1, 0
     dirs = sign(dirs);
-    fprintf('\nNOTE: genes with directional value of zero WILL be included in the analysis!\n');
+    if any(dirs == 0)
+        fprintf('\nNOTE: genes with directional value of zero WILL be included in the analysis!\n');
+    end
     
     % alternative option: remove entries with DIRS equal to zero
     % ind = dirs == 0;
@@ -160,8 +161,6 @@ fprintf('Checking gene set sizes... ');
 [GSnames,GSsizes] = cellfreq(gene_sets(:,1));
 ind = (GSsizes < minGSsize) | (GSsizes > maxGSsize);
 gene_sets(ismember(gene_sets(:,1),GSnames(ind)),:) = [];
-% GSnames(ind) = [];
-% GSsizes(ind) = [];
 fprintf('Removed %u gene sets not satisfying size limits.\n',sum(ind));
 fprintf('Final number of gene sets remaining: %u\n',length(unique(gene_sets(:,1))));
 
