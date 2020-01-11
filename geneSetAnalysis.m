@@ -320,6 +320,50 @@ switch lower(method)
         % calculate non-directional test statistics
         statvals_nondir = arrayfun(@(nums) sum(pvals(ismember(genes,gene_sets(ismember(gene_sets(:,1),nums),2))),1),GSnums);
         
+    case 'mean'
+        
+        if ~isempty(dirs)
+            
+            if strcmpi(stat_type,'p')
+                
+                pvals_mixup = -pvals_mixup;
+                pvals_mixdn = -pvals_mixdn;
+                
+                % NOTE: Due to precision limits, the MEAN approach treats
+                %       all p-values < 1e-17 (2 ^ -52) equally when 
+                %       calculating the distinct directional statistics.
+                %       This is because we want near-zero p-values of
+                %       different directions to be on opposite ends of the
+                %       stat value, so we cannot simply take the negative.
+                %       Instead, we must subtract a value of 1, which
+                %       results in a loss of precision.
+                pvals_distup = (1 - pvals).*dirs;
+                pvals_distdn = (pvals - 1).*dirs;
+                
+            elseif strcmpi(stat_type,'other')
+                
+                pvals_distup = pvals.*dirs;
+                pvals_distdn = -pvals.*dirs;
+                
+            end
+            
+            % calculate directional test statistics
+            statvals_distup = arrayfun(@(nums) mean(pvals_distup(ismember(genes,gene_sets(ismember(gene_sets(:,1),nums),2)))),GSnums);
+            statvals_distdn = -statvals_distup;
+            
+            statvals_mixup = arrayfun(@(nums) mean(pvals_mixup(ismember(genes_mixup,gene_sets_mixup(ismember(gene_sets_mixup(:,1),nums),2)))),GSnums_mixup);
+            statvals_mixdn = arrayfun(@(nums) mean(pvals_mixdn(ismember(genes_mixdn,gene_sets_mixdn(ismember(gene_sets_mixdn(:,1),nums),2)))),GSnums_mixdn);
+            
+        end
+        
+        if strcmpi(stat_type,'p')
+            pvals = -pvals;
+        end
+        
+        % calculate non-directional test statistics
+        statvals_nondir = arrayfun(@(nums) mean(pvals(ismember(genes,gene_sets(ismember(gene_sets(:,1),nums),2)))),GSnums);
+        
+        
         
 %     case 'gsea'
 %         % Gene Set Enrichment Analysis (GSEA)
@@ -432,6 +476,20 @@ if isnumeric(nperms)
                 bg_stat_distdn = reshape([bg_stat_distdn{:}],nperms,length(uniq_sizes))';
             end
             
+        case 'mean'
+            
+            bg_stat_nondir = arrayfun(@(s) mean(p_permute(1:s,:),1),uniq_sizes,'UniformOutput',false);
+            
+            if ~isempty(dirs)
+                bg_stat_mixup = arrayfun(@(s) mean(p_permute_mixup(1:s,:),1),uniq_sizes_mixup,'UniformOutput',false);
+                bg_stat_mixdn = arrayfun(@(s) mean(p_permute_mixdn(1:s,:),1),uniq_sizes_mixdn,'UniformOutput',false);
+                
+                bg_stat_distup = arrayfun(@(s) mean(p_permute_distup(1:s,:),1),uniq_sizes,'UniformOutput',false);
+                bg_stat_distup = reshape([bg_stat_distup{:}],nperms,length(uniq_sizes))';
+                
+                bg_stat_distdn = arrayfun(@(s) mean(p_permute_distdn(1:s,:),1),uniq_sizes,'UniformOutput',false);
+                bg_stat_distdn = reshape([bg_stat_distdn{:}],nperms,length(uniq_sizes))';
+            end
             
         case 'gsea'
             
