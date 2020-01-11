@@ -13,10 +13,11 @@ function h = genHeatMap(data,colnames,rownames,clust_dim,clust_dist,col_map,col_
 % 
 %   rownames    Cell array of data row names.
 %
-%   clust_dim   'none'  the data will be plotted as provided (DEFAULT)
+%   clust_dim   'none'  the data will be plotted as provided
 %               'rows'  cluster/rearrange the rows based on distance
 %               'cols'  cluster/rearrange the columns based on distance
-%               'both'  cluster/rearrange rows and columns based on distance
+%               'both'  cluster/rearrange rows and columns based on
+%                       distance (DEFAULT)
 %
 %   clust_dist  Distance metric to be used for clustering, ignored if
 %               clust_dim is 'none'. Options are the same as those for
@@ -45,7 +46,7 @@ function h = genHeatMap(data,colnames,rownames,clust_dim,clust_dist,col_map,col_
 
 % handle input arguments
 if nargin < 4 || isempty(clust_dim)
-    clust_dim = 'none';
+    clust_dim = 'both';
 elseif ~ismember(clust_dim,{'none','rows','cols','both'})
     error('%s is not a valid CLUST_DIM option. Choose "none", "rows", "cols", or "both".',clust_dim);
 end
