@@ -69,7 +69,7 @@ function [GSAres,gene_sets_proc] = geneSetAnalysis(...
 %               adjusted) for each of the relevant directionality classes.
 %
 %
-% Jonathan Robinson, 2019-11-05
+% Jonathan Robinson, 2020-01-11
 
 
 %% Handle input arguments
@@ -181,7 +181,13 @@ fprintf('Final number of gene sets remaining: %u\n',length(unique(gene_sets(:,1)
 [uGenes,freq_uGenes] = cellfreq(genes); 
 dup_genes = uGenes(freq_uGenes > 1);  % find duplicated gene names
 if ~isempty(dup_genes)
-    fprintf('Handling duplicated gene names... ');
+    
+    % Throw error if duplicates exist - comment out this line to override
+    error('Duplicate (non-unique) entries found in GENES! All entries must be unique.');
+    
+    % If this check is overriden, duplicate gene names will be appended
+    % with numbers to make their names unique
+    fprintf('*** WARNING: Non-unique entries found in GENES - Modifying names to obtain unique entries ***\n');
     for i = 1:length(dup_genes)
         
         % append repeated gene names with '_1', '_2', etc.
@@ -197,7 +203,6 @@ if ~isempty(dup_genes)
         gene_sets(GS_ind,:) = [];
         
     end
-    fprintf('Done.\n');
 end
 
 % convert GENES and GENE_SETS to numeric arrays to speed up calculations
