@@ -1,4 +1,4 @@
-function [GSAres,gene_sets_proc] = geneSetAnalysis( ...
+function [GSAres,gene_sets_proc] = geneSetAnalysis(...
     genes,pvals,dirs,gene_sets,method,nperms,GS_size_bounds,stat_type)
 %geneSetAnalysis  Perform a gene set analysis (GSA).
 %
@@ -28,7 +28,8 @@ function [GSAres,gene_sets_proc] = geneSetAnalysis( ...
 %               Continuous data (such as fold-change values) will be
 %               converted to ternary (+1,-1,0) values.
 %               
-%               *** NOTE: leave empty [] if PVALS are signed. ***
+%               *** NOTE: if PVALS are signed, this input will be ingored
+%                   and DIRS set equal to sign(PVALS).
 %
 %   gene_sets   Nx2 cell array of gene set information, where the first
 %               column contains the gene set names, and the second column
@@ -108,9 +109,19 @@ genes = genes(:);
 pvals = pvals(:);
 dirs = dirs(:);
 
+% separate direction and magnitude information if PVALS are signed
+if any(pvals < 0)
+    if ~isempty(dirs)
+        warning('Negative entries found in PVALS. The DIRS input will be overwritten with sign(PVALS).');
+    end
+    dirs = sign(pvals);
+    pvals = abs(pvals);
+end
+
+% deal with problematic p-values
 if strcmpi(stat_type,'p')
     % handle p-values equal to 0 or 1
-    ind = pvals == 0;
+    ind = (pvals == 0);
     if ~isempty(ind)
         fprintf('*** WARNING: p-values equal to ZERO will be set to 0.5x the lowest nonzero p-value ***\n');
         pvals(ind) = 0.5*min(pvals(~ind));
@@ -120,11 +131,13 @@ if strcmpi(stat_type,'p')
         fprintf('*** WARNING: p-values equal to ONE will be set to 1 - eps (2^-52) ***\n');
         pvals(ind) = 1-eps;
     end
+    if any(pvals > 1)
+        error('p-values cannot exceed a magnitude of 1.');
+    end
 end
 
-
 if ~isempty(dirs)
-    % convert DIRS to +1, -1, 0
+    % convert DIRS to +1, -1, 0, if not already
     dirs = sign(dirs);
     if any(dirs == 0)
         fprintf('\nNOTE: genes with directional value of zero WILL be included in the analysis!\n');
@@ -331,7 +344,6 @@ fprintf('Done.\n');
 
 %% Calculate significance
 
-
 if isnumeric(nperms)
     
     % randomly shuffle p-values and assemble into matrix
@@ -382,7 +394,6 @@ if isnumeric(nperms)
                 bg_stat_mixup = arrayfun(@(s) fisher(p_permute_mixup(1:s,:)),uniq_sizes_mixup,'UniformOutput',false);
                 bg_stat_mixdn = arrayfun(@(s) fisher(p_permute_mixdn(1:s,:)),uniq_sizes_mixdn,'UniformOutput',false);
             end
-            
             
         case {'stouffer','reporter'}
             
