@@ -1,14 +1,14 @@
-function gsc = loadGeneSetCollection(filename)
-%loadGeneSetCollection  Load gene set collection from a .gmt file.
+function gsc = importGSC(filename)
+%importGSC  Import a gene set collection (GSC) from a .gmt file.
 %
 % Usage:
 %
-%   gsc = loadGeneSetCollection(filename);
+%   gsc = importGSC(filename);
 %
 %
 % Input:
 %
-%   GSCname   A string specifying the gene set collection (.gmt) file name.
+%   filename  A string specifying the gene set collection (.gmt) file name.
 %             Also include the path to the file if it is not in the current
 %             working directory.
 %
@@ -20,7 +20,7 @@ function gsc = loadGeneSetCollection(filename)
 %             each gene set.
 %
 %
-% Jonathan Robinson, 2019-04-14
+% Jonathan Robinson, 2020-01-13
 
 
 % import data
