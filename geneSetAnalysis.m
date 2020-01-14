@@ -31,9 +31,10 @@ function [GSAres,gene_sets_proc] = geneSetAnalysis(...
 %               *** NOTE: if PVALS are signed, this input will be ingored
 %                   and DIRS set equal to sign(PVALS).
 %
-%   gene_sets   Nx2 cell array of gene set information, where the first
-%               column contains the gene set names, and the second column
-%               contains the gene names associated with each gene set.
+%   gsc         A gene set collection. An Nx2 cell array of gene set
+%               information, where the first column contains the gene set
+%               names, and the second column contains the gene names (or
+%               IDs) associated with each gene set.
 %
 %   method      Satistical method used to combine gene-level statistics:
 %                   'fisher'    Fisher's method.
