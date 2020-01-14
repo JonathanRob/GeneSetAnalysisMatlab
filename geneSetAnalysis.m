@@ -1,18 +1,18 @@
-function [GSAres,gene_sets_proc] = geneSetAnalysis(...
-    genes,pvals,dirs,gene_sets,method,nperms,GS_size_bounds,stat_type)
+function [GSAres,GSCproc] = geneSetAnalysis(...
+    genes,pvals,dirs,gsc,method,nperms,GS_size_bounds,stat_type)
 %geneSetAnalysis  Perform a gene set analysis (GSA).
 %
 % Performs a GSA given gene-level statistics (pvals) and directionality
-% (dirs) for each gene, using gene sets defined by gene_sets and the
+% (dirs) for each gene, using gene sets defined by the GSC and the
 % specified method of calculating the test-statistic. GeneSetAnalysis
 % returns the calculated gene set sizes and p-values in GSAres, as well as
-% the processed list of gene sets (gene_sets_proc) if requested.
+% the processed list of gene sets (GSCproc) if requested.
 %
 %
 % Usage:
 %
-%   [GSAres,gene_sets_proc] = geneSetAnalysis( ...
-%       genes,pvals,dirs,gene_sets,method,nperms,GS_size_bounds,stat_type);
+%   [GSAres,GSCproc] = geneSetAnalysis( ...
+%       genes,pvals,dirs,gsc,method,nperms,GS_size_bounds,stat_type);
 %
 %
 % Input:
@@ -153,30 +153,30 @@ end
 
 %% Process gene sets
 
-% remove rows of GENE_SETS that do not contain genes in provided list
+% remove rows of GSC that do not contain genes in provided list
 fprintf('Checking for empty gene sets... ');
-a = length(unique(gene_sets(:,1)));  % check number of sets before removal
-ind = ~ismember(gene_sets(:,2),genes);
-gene_sets(ind,:) = [];
-b = length(unique(gene_sets(:,1)));  % check number of sets after removal
+a = length(unique(gsc(:,1)));  % check number of sets before removal
+ind = ~ismember(gsc(:,2),genes);
+gsc(ind,:) = [];
+b = length(unique(gsc(:,1)));  % check number of sets after removal
 fprintf('Removed %u empty sets.\n',a-b);
 
-% remove repeated rows in GENE_SETS
-fprintf('Checking for duplicated rows in GENE_SETS... ');
-a = size(gene_sets,1);  % check number of rows before removal
-[~,gs_ind] = ismember(gene_sets,gene_sets);
+% remove repeated rows in GSC
+fprintf('Checking for duplicated rows in GSC... ');
+a = size(gsc,1);  % check number of rows before removal
+[~,gs_ind] = ismember(gsc,gsc);
 [~,uniq_ind] = unique(gs_ind,'rows');
-gene_sets = gene_sets(uniq_ind,:);
-b = size(gene_sets,1);  % check number of rows after removal
+gsc = gsc(uniq_ind,:);
+b = size(gsc,1);  % check number of rows after removal
 fprintf('Removed %u duplicated rows.\n',a-b);
 
 % determine gene set sizes and remove those not satisfying constraints
 fprintf('Checking gene set sizes... ');
-[GSnames,GSsizes] = cellfreq(gene_sets(:,1));
+[GSnames,GSsizes] = cellfreq(gsc(:,1));
 ind = (GSsizes < minGSsize) | (GSsizes > maxGSsize);
-gene_sets(ismember(gene_sets(:,1),GSnames(ind)),:) = [];
+gsc(ismember(gsc(:,1),GSnames(ind)),:) = [];
 fprintf('Removed %u gene sets not satisfying size limits.\n',sum(ind));
-fprintf('Final number of gene sets remaining: %u\n',length(unique(gene_sets(:,1))));
+fprintf('Final number of gene sets remaining: %u\n',length(unique(gsc(:,1))));
 
 % handle duplicated gene names
 [uGenes,freq_uGenes] = cellfreq(genes); 
@@ -196,27 +196,27 @@ if ~isempty(dup_genes)
         genes(gene_ind) = strcat(repmat(dup_genes(i),sum(gene_ind),1),'_',arrayfun(@num2str,[1:sum(gene_ind)]','UniformOutput',false));
         
         % add new GS-gene associations for each of the newly labeled genes
-        GS_ind = ismember(gene_sets(:,2),dup_genes(i));
-        GSrep = repmat(gene_sets(GS_ind,1),1,sum(gene_ind))';
-        gene_sets = [gene_sets;[GSrep(:),repmat(genes(gene_ind),sum(GS_ind),1)]];
+        GS_ind = ismember(gsc(:,2),dup_genes(i));
+        GSrep = repmat(gsc(GS_ind,1),1,sum(gene_ind))';
+        gsc = [gsc;[GSrep(:),repmat(genes(gene_ind),sum(GS_ind),1)]];
         
         % remove the old GS-gene associations
-        gene_sets(GS_ind,:) = [];
+        gsc(GS_ind,:) = [];
         
     end
 end
 
-% convert GENES and GENE_SETS to numeric arrays to speed up calculations
-gene_sets_proc = gene_sets;  % save processed GENE_SETS
-GSnames = unique(gene_sets(:,1),'stable');  % save list of gene set names
+% convert GENES and GSC to numeric arrays to speed up calculations
+GSCproc = gsc;  % save processed GSC
+GSnames = unique(gsc(:,1),'stable');  % save list of gene set names
 
-[~,gsnums] = ismember(gene_sets(:,1),gene_sets(:,1));  % index gene sets
-[~,gnums] = ismember(gene_sets(:,2),genes);  % index genes
-gene_sets = [gsnums,gnums];  % numeric gene_set
+[~,gsnums] = ismember(gsc(:,1),gsc(:,1));  % index gene sets
+[~,gnums] = ismember(gsc(:,2),genes);  % index genes
+gsc = [gsnums,gnums];  % numeric gene_set
 
 [~,genes] = ismember(genes,genes);  % numeric genes
 
-[GSnums,GSsizes] = cellfreq(gene_sets(:,1));  % recalc gene set sizes
+[GSnums,GSsizes] = cellfreq(gsc(:,1));  % recalc gene set sizes
 
 
 %% Calculate test-statistics
@@ -232,13 +232,13 @@ if ~isempty(dirs)
     genes_mixdn = genes(ind_dn);
     pvals_mixdn = pvals(ind_dn);
     
-    ind_up = ismember(gene_sets(:,2),genes_mixup);
-    gene_sets_mixup = gene_sets(ind_up,:);
-    [GSnums_mixup,GSsizes_mixup] = cellfreq(gene_sets_mixup(:,1));
+    ind_up = ismember(gsc(:,2),genes_mixup);
+    gsc_mixup = gsc(ind_up,:);
+    [GSnums_mixup,GSsizes_mixup] = cellfreq(gsc_mixup(:,1));
     
-    ind_dn = ismember(gene_sets(:,2),genes_mixdn);
-    gene_sets_mixdn = gene_sets(ind_dn,:);
-    [GSnums_mixdn,GSsizes_mixdn] = cellfreq(gene_sets_mixdn(:,1));
+    ind_dn = ismember(gsc(:,2),genes_mixdn);
+    gsc_mixdn = gsc(ind_dn,:);
+    [GSnums_mixdn,GSsizes_mixdn] = cellfreq(gsc_mixdn(:,1));
     fprintf('Done.\n');
 end
 
@@ -250,24 +250,24 @@ switch lower(method)
     
     case 'fisher'
         % Fisher method test statistic: -2*sum(log(p))
-        statvals_nondir = arrayfun(@(nums) fisher(pvals(ismember(genes,gene_sets(ismember(gene_sets(:,1),nums),2)))),GSnums);
+        statvals_nondir = arrayfun(@(nums) fisher(pvals(ismember(genes,gsc(ismember(gsc(:,1),nums),2)))),GSnums);
         
         if ~isempty(dirs)
-            statvals_mixup = arrayfun(@(nums) fisher(pvals_mixup(ismember(genes_mixup,gene_sets_mixup(ismember(gene_sets_mixup(:,1),nums),2)))),GSnums_mixup);
-            statvals_mixdn = arrayfun(@(nums) fisher(pvals_mixdn(ismember(genes_mixdn,gene_sets_mixdn(ismember(gene_sets_mixdn(:,1),nums),2)))),GSnums_mixdn);
+            statvals_mixup = arrayfun(@(nums) fisher(pvals_mixup(ismember(genes_mixup,gsc_mixup(ismember(gsc_mixup(:,1),nums),2)))),GSnums_mixup);
+            statvals_mixdn = arrayfun(@(nums) fisher(pvals_mixdn(ismember(genes_mixdn,gsc_mixdn(ismember(gsc_mixdn(:,1),nums),2)))),GSnums_mixdn);
         end
             
     case {'stouffer','reporter'}
         % Stouffer method test statistic: sum(norminv(1-p))/sqrt(length(p))
         % Reporter method uses the same test statistic, but significance is
         % calculated differently later on.
-        statvals_nondir = arrayfun(@(nums) stouffer(pvals(ismember(genes,gene_sets(ismember(gene_sets(:,1),nums),2)))),GSnums);
+        statvals_nondir = arrayfun(@(nums) stouffer(pvals(ismember(genes,gsc(ismember(gsc(:,1),nums),2)))),GSnums);
         
         if ~isempty(dirs)
-            statvals_mixup = arrayfun(@(nums) stouffer(pvals_mixup(ismember(genes_mixup,gene_sets_mixup(ismember(gene_sets_mixup(:,1),nums),2)))),GSnums_mixup);
-            statvals_mixdn = arrayfun(@(nums) stouffer(pvals_mixdn(ismember(genes_mixdn,gene_sets_mixdn(ismember(gene_sets_mixdn(:,1),nums),2)))),GSnums_mixdn);
+            statvals_mixup = arrayfun(@(nums) stouffer(pvals_mixup(ismember(genes_mixup,gsc_mixup(ismember(gsc_mixup(:,1),nums),2)))),GSnums_mixup);
+            statvals_mixdn = arrayfun(@(nums) stouffer(pvals_mixdn(ismember(genes_mixdn,gsc_mixdn(ismember(gsc_mixdn(:,1),nums),2)))),GSnums_mixdn);
             
-            statvals_distup = arrayfun(@(nums) stouffer_dir(pvals(ismember(genes,gene_sets(ismember(gene_sets(:,1),nums),2))),dirs(ismember(genes,gene_sets(ismember(gene_sets(:,1),nums),2)))),GSnums);
+            statvals_distup = arrayfun(@(nums) stouffer_dir(pvals(ismember(genes,gsc(ismember(gsc(:,1),nums),2))),dirs(ismember(genes,gsc(ismember(gsc(:,1),nums),2)))),GSnums);
             statvals_distdn = -statvals_distup;
         end
     
@@ -303,11 +303,11 @@ switch lower(method)
             end
         
             % calculate directional test statistics
-            statvals_distup = arrayfun(@(nums) sum(pvals_distup(ismember(genes,gene_sets(ismember(gene_sets(:,1),nums),2))),1),GSnums);
-            statvals_distdn = arrayfun(@(nums) sum(pvals_distdn(ismember(genes,gene_sets(ismember(gene_sets(:,1),nums),2))),1),GSnums);
+            statvals_distup = arrayfun(@(nums) sum(pvals_distup(ismember(genes,gsc(ismember(gsc(:,1),nums),2))),1),GSnums);
+            statvals_distdn = arrayfun(@(nums) sum(pvals_distdn(ismember(genes,gsc(ismember(gsc(:,1),nums),2))),1),GSnums);
             
-            statvals_mixup = arrayfun(@(nums) sum(pvals_mixup(ismember(genes_mixup,gene_sets_mixup(ismember(gene_sets_mixup(:,1),nums),2))),1),GSnums_mixup);
-            statvals_mixdn = arrayfun(@(nums) sum(pvals_mixdn(ismember(genes_mixdn,gene_sets_mixdn(ismember(gene_sets_mixdn(:,1),nums),2))),1),GSnums_mixdn);
+            statvals_mixup = arrayfun(@(nums) sum(pvals_mixup(ismember(genes_mixup,gsc_mixup(ismember(gsc_mixup(:,1),nums),2))),1),GSnums_mixup);
+            statvals_mixdn = arrayfun(@(nums) sum(pvals_mixdn(ismember(genes_mixdn,gsc_mixdn(ismember(gsc_mixdn(:,1),nums),2))),1),GSnums_mixdn);
             
         end
         
@@ -319,7 +319,7 @@ switch lower(method)
         end
         
         % calculate non-directional test statistics
-        statvals_nondir = arrayfun(@(nums) sum(pvals(ismember(genes,gene_sets(ismember(gene_sets(:,1),nums),2))),1),GSnums);
+        statvals_nondir = arrayfun(@(nums) sum(pvals(ismember(genes,gsc(ismember(gsc(:,1),nums),2))),1),GSnums);
         
     case 'mean'
         
@@ -349,11 +349,11 @@ switch lower(method)
             end
             
             % calculate directional test statistics
-            statvals_distup = arrayfun(@(nums) mean(pvals_distup(ismember(genes,gene_sets(ismember(gene_sets(:,1),nums),2)))),GSnums);
+            statvals_distup = arrayfun(@(nums) mean(pvals_distup(ismember(genes,gsc(ismember(gsc(:,1),nums),2)))),GSnums);
             statvals_distdn = -statvals_distup;
             
-            statvals_mixup = arrayfun(@(nums) mean(pvals_mixup(ismember(genes_mixup,gene_sets_mixup(ismember(gene_sets_mixup(:,1),nums),2)))),GSnums_mixup);
-            statvals_mixdn = arrayfun(@(nums) mean(pvals_mixdn(ismember(genes_mixdn,gene_sets_mixdn(ismember(gene_sets_mixdn(:,1),nums),2)))),GSnums_mixdn);
+            statvals_mixup = arrayfun(@(nums) mean(pvals_mixup(ismember(genes_mixup,gsc_mixup(ismember(gsc_mixup(:,1),nums),2)))),GSnums_mixup);
+            statvals_mixdn = arrayfun(@(nums) mean(pvals_mixdn(ismember(genes_mixdn,gsc_mixdn(ismember(gsc_mixdn(:,1),nums),2)))),GSnums_mixdn);
             
         end
         
@@ -362,7 +362,7 @@ switch lower(method)
         end
         
         % calculate non-directional test statistics
-        statvals_nondir = arrayfun(@(nums) mean(pvals(ismember(genes,gene_sets(ismember(gene_sets(:,1),nums),2)))),GSnums);
+        statvals_nondir = arrayfun(@(nums) mean(pvals(ismember(genes,gsc(ismember(gsc(:,1),nums),2)))),GSnums);
         
         
         
@@ -377,7 +377,7 @@ switch lower(method)
 %         pvals_distup = abs(pvals_distup);  % use absolute value of t-stat
 %         
 %         % calculate test statistics
-%         statvals_distup = arrayfun(@(nums) gsea(pvals_distup,ismember(genes(sort_ind),gene_sets(ismember(gene_sets(:,1),nums),2))),GSnums);
+%         statvals_distup = arrayfun(@(nums) gsea(pvals_distup,ismember(genes(sort_ind),gsc(ismember(gsc(:,1),nums),2))),GSnums);
 %         statvals_distdn = -statvals_distup;
 %         
 %         % NOTE: non-directional and mixed-directional classes are not available for GSEA
