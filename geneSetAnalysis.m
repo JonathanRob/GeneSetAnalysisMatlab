@@ -69,7 +69,7 @@ function [GSAres,gene_sets_proc] = geneSetAnalysis(...
 %               adjusted) for each of the relevant directionality classes.
 %
 %
-% Jonathan Robinson, 2020-01-11
+% Jonathan Robinson, 2020-01-14
 
 
 %% Handle input arguments
@@ -122,12 +122,12 @@ end
 if strcmpi(stat_type,'p')
     % handle p-values equal to 0 or 1
     ind = (pvals == 0);
-    if ~isempty(ind)
+    if sum(ind) > 0
         fprintf('*** WARNING: p-values equal to ZERO will be set to 0.5x the lowest nonzero p-value ***\n');
         pvals(ind) = 0.5*min(pvals(~ind));
     end
-    ind = pvals == 1;
-    if ~isempty(ind)
+    ind = (pvals == 1);
+    if sum(ind) > 0
         fprintf('*** WARNING: p-values equal to ONE will be set to 1 - eps (2^-52) ***\n');
         pvals(ind) = 1-eps;
     end
