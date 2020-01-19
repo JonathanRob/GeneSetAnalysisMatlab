@@ -4,7 +4,7 @@ function [GSAres,GSCproc] = geneSetAnalysis(...
 %
 % Performs a GSA given gene-level statistics (pvals) and directionality
 % (dirs) for each gene, using gene sets defined by the GSC and the
-% specified method of calculating the test-statistic. GeneSetAnalysis
+% specified method of calculating the test-statistic. geneSetAnalysis
 % returns the calculated gene set sizes and p-values in GSAres, as well as
 % the processed list of gene sets (GSCproc) if requested.
 %
@@ -18,15 +18,19 @@ function [GSAres,GSCproc] = geneSetAnalysis(...
 % Input:
 %
 %   genes       Column of gene names or identifiers corresponding to data
-%               in PVALS and DIRS.
+%               in PVALS and DIRS. The names or identifiers used in GENES
+%               should be consistent with those in the gene set collection
+%               (GSC) input (see below).
 %
 %   pvals       Column vector of gene-level statistics (e.g., p-values)
-%               corresponding to GENES.
+%               corresponding to GENES. If the statistics are not p-like,
+%               it should be specified in the STAT_TYPE input (see below).
 %
-%   dirs        Column vector of directions associated with each gene.
-%               (up = 1, down = -1, no change = 0)
+%   dirs        Column vector of directions associated with each gene:
+%               (up = 1, down = -1, no change = 0). 
 %               Continuous data (such as fold-change values) will be
 %               converted to ternary (+1,-1,0) values.
+%               Leave blank (dirs = []) if DIRS are not available.
 %               
 %               *** NOTE: if PVALS are signed, this input will be ingored
 %                   and DIRS set equal to sign(PVALS).
@@ -34,16 +38,32 @@ function [GSAres,GSCproc] = geneSetAnalysis(...
 %   gsc         A gene set collection. An Nx2 cell array of gene set
 %               information, where the first column contains the gene set
 %               names, and the second column contains the gene names (or
-%               IDs) associated with each gene set.
+%               IDs) associated with each gene set. For example:
+%               
+%               {'GLYCOLYSIS-GLUCONEOGENESIS'   'ACSS2'
+%                'GLYCOLYSIS-GLUCONEOGENESIS'   'GCK'
+%                'GLYCOLYSIS-GLUCONEOGENESIS'   'PGK2'
+%                'STEROID-BIOSYNTHESIS'         'SOAT1'
+%                'STEROID-BIOSYNTHESIS'         'LSS'
+%                ...                            ...    }
+%
+%               The GSC can be loaded using the "importGSC" function or
+%               generated from a genome-scale metabolic model using the
+%               "extractMetaboliteGSC" or "extractSubsystemGSC" functions.
+%
+%               Genes in the second column can be abbreviations or IDs, as
+%               long as they are consistent with the naming used in the
+%               GENES input.
 %
 %   method      Satistical method used to combine gene-level statistics:
-%                   'fisher'    Fisher's method.
-%                 'reporter'    Reporter method.
-%                 'stouffer'    Stouffer's method.
-%                 'wilcoxon'    Wilcoxon rank-sum test.
-%                     'mean'    Mean (arithmetic) value.
-%                  'geomean'    Mean (geometric) value.
-%                   'median'    Median value.
+%
+%                   'fisher'    Fisher's method
+%                 'reporter'    Reporter method
+%                 'stouffer'    Stouffer's method
+%                 'wilcoxon'    Wilcoxon rank-sum test (DEFAULT)
+%                     'mean'    Mean (arithmetic) value
+%                  'geomean'    Mean (geometric) value
+%                   'median'    Median value
 %                     'GSEA'    Gene Set Enrichment Analysis (not complete)
 %
 %   nperms      Number of permutations to perform when calculating the 
@@ -69,8 +89,14 @@ function [GSAres,GSCproc] = geneSetAnalysis(...
 %               names and sizes, and their associated p-values (raw and
 %               adjusted) for each of the relevant directionality classes.
 %
+%   GSCproc     The processed gene set collection (GSC) cell array that is
+%               used in the gene set analysis. This is the resulting GSC
+%               after the input GSC is processed to remove dulicate
+%               entries, gene sets that do not satisfy the GS_SIZE_BOUNDS,
+%               and removing genes that are not present in the GENES input.
 %
-% Jonathan Robinson, 2020-01-14
+%
+% Jonathan Robinson, 2020-01-19
 
 
 %% Handle input arguments
@@ -160,6 +186,9 @@ ind = ~ismember(gsc(:,2),genes);
 gsc(ind,:) = [];
 b = length(unique(gsc(:,1)));  % check number of sets after removal
 fprintf('Removed %u empty sets.\n',a-b);
+if isempty(gsc)
+    error('None of the GENES were found in the GSC. Verify that GENES and GSC use the same gene ID/name type, and that GSC is properly formatted.');
+end
 
 % remove repeated rows in GSC
 fprintf('Checking for duplicated rows in GSC... ');
@@ -183,7 +212,7 @@ fprintf('Final number of gene sets remaining: %u\n',length(unique(gsc(:,1))));
 dup_genes = uGenes(freq_uGenes > 1);  % find duplicated gene names
 if ~isempty(dup_genes)
     
-    % Throw error if duplicates exist - comment out this line to override
+    % Throw error if duplicates exist - COMMENT OUT THIS LINE TO OVERRIDE
     error('Duplicate (non-unique) entries found in GENES! All entries must be unique.');
     
     % If this check is overriden, duplicate gene names will be appended
