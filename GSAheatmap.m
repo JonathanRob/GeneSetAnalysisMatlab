@@ -166,7 +166,6 @@ else
     error('Incorrect number of columns.');
 end
 
-pData(end,end) = 3*colorMax;  % necessary for proper color mapping
 colorBounds = [0,3*colorMax];
 
 
