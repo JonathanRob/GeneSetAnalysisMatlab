@@ -141,10 +141,7 @@ pValRowNames = pValRowNames(sort_ind);
 
 %% Generate heatmap
 
-% pad data matrix with zeros (pcolor cuts off last row and column)
-pData(end+1,end+1) = 0;
-
-% custom colormap
+% define custom colormap
 hotcmap = flipud(hot(120));
 cmap_down = custom_cmap([0.1 0.1 0.8;0 0.7 0.9;1 1 1],100,[0.25;0.4;0.35]);
 cmap_nondir = custom_cmap([0 0 0;1 1 1]);
@@ -158,13 +155,13 @@ cmap_up = hotcmap(1:100,:);
 % color in CMAP.
 cmap = [cmap_down; cmap_nondir; cmap_up];
 if length(pValColNames) == 5
-    pData(1:end-1,1:2) = min(pData(1:end-1,1:2),0.999999*colorMax);
-    pData(1:end-1,3)   = min(pData(1:end-1,3) + 1.000001*colorMax,1.999999*colorMax);
-    pData(1:end-1,4:5) = min(pData(1:end-1,4:5) + 2.000001*colorMax,2.999999*colorMax);
+    pData(:,1:2) = min(pData(:,1:2),0.999999*colorMax);
+    pData(:,3)   = min(pData(:,3) + 1.000001*colorMax,1.999999*colorMax);
+    pData(:,4:5) = min(pData(:,4:5) + 2.000001*colorMax,2.999999*colorMax);
 elseif length(pValColNames) == 3
-    pData(1:end-1,1) = min(pData(1:end-1,1),0.999999*colorMax);
-    pData(1:end-1,2) = min(pData(1:end-1,2) + 1.000001*colorMax,1.999999*colorMax);
-    pData(1:end-1,3) = min(pData(1:end-1,3) + 2.000001*colorMax,2.999999*colorMax);
+    pData(:,1) = min(pData(:,1),0.999999*colorMax);
+    pData(:,2) = min(pData(:,2) + 1.000001*colorMax,1.999999*colorMax);
+    pData(:,3) = min(pData(:,3) + 2.000001*colorMax,2.999999*colorMax);
 else
     error('Incorrect number of columns.');
 end
@@ -172,36 +169,20 @@ end
 pData(end,end) = 3*colorMax;  % necessary for proper color mapping
 colorBounds = [0,3*colorMax];
 
-% generate plot
-a = axes;
-set(a,'YAxisLocation','Right','XTick',[],'YTick', (1:size(pData,1))+0.5,'YTickLabels',pValRowNames);
-set(a,'TickLength',[0 0],'XLim',[1 size(pData,2)],'YLim',[1 size(pData,1)]);
-hold on
 
-h = pcolor(pData);
-set(h,'EdgeColor','k');
-set(gca,'XTick', (1:size(pData,2))+0.5);
-set(gca,'YTick', (1:size(pData,1))+0.5);
-set(gca,'XTickLabels',pValColNames,'YTickLabels',pValRowNames);
-set(gca,'XTickLabelRotation',90);
-colormap(cmap);
+%% Generate heatmap
 
-if ~isempty(colorBounds)
-    caxis(colorBounds);
-end
+% use custom function to generate heatmap
+genHeatMap(pData, pValColNames, pValRowNames, 'none', [], cmap, colorBounds, 'k');
 
-xl = get(gca,'XLim');
-yl = get(gca,'YLim');
-plot(xl([1,1,2,2,1]),yl([1,2,2,1,1]),'k');
-
-% scale plot horizontally to deal with too long or short gene set names
+% scale plot horizontally to deal with too long or short row names
 maxLength = max(cellfun(@length, pValRowNames));
-scaleX = min(max(0.5, 1-maxLength/100), 0.8);
+scaleX = min(max(0.5, 1-maxLength/100), 0.8);  % scale between 0.5x - 0.8x
 pos = get(gca,'Position');
 set(gca,'Position',pos .* [1 1 scaleX 1]);
 
 
-%% add colorbars
+%% add custom colorbars
 
 % reduce figure height to make room for the colorbars
 scaleY = min(0.85, 0.75 + size(pData,1)*0.002);
