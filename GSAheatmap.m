@@ -46,7 +46,7 @@ function [] = GSAheatmap(GSAres,adjusted,filterMethod,filterThresh,colorMax)
 %                   (Default = maximum -log10 pvalue)
 %
 %
-% Jonathan Robinson, 2020-01-14
+% Jonathan Robinson, 2020-01-19
 
 
 %% Initialize and organize data
@@ -172,7 +172,7 @@ end
 pData(end,end) = 3*colorMax;  % necessary for proper color mapping
 colorBounds = [0,3*colorMax];
 
-% generate pcolor plot
+% generate plot
 a = axes;
 set(a,'YAxisLocation','Right','XTick',[],'YTick', (1:size(pData,1))+0.5,'YTickLabels',pValRowNames);
 set(a,'TickLength',[0 0],'XLim',[1 size(pData,2)],'YLim',[1 size(pData,1)]);
@@ -193,6 +193,12 @@ end
 xl = get(gca,'XLim');
 yl = get(gca,'YLim');
 plot(xl([1,1,2,2,1]),yl([1,2,2,1,1]),'k');
+
+% scale plot horizontally to deal with too long or short gene set names
+maxLength = max(cellfun(@length, pValRowNames));
+scaleX = min(max(0.5, 1-maxLength/100), 0.8);
+pos = get(gca,'Position');
+set(gca,'Position',pos .* [1 1 scaleX 1]);
 
 
 %% add colorbars
