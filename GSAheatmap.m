@@ -80,10 +80,10 @@ pValColNames = {'dist-down';'mix-down';'non-dir';'mix-up';'dist-up'};
 if ( adjusted )
     pValCols = regexprep(pValCols,'p_','padj_');
 end
-[keep,pValColInds] = ismember(pValCols,GSAres(1,:));
+[keep,pValColInds] = ismember(pValCols,GSAres.Properties.VariableNames);
 pValColInds = pValColInds(keep);  % in case some p-value types are missing
 pValColNames = pValColNames(keep);
-pData = cell2mat(GSAres(2:end,pValColInds));
+pData = table2array(GSAres(:,pValColInds));
 
 % set max color value if not specified
 if isempty(colorMax)
@@ -91,7 +91,7 @@ if isempty(colorMax)
 end
 
 % get rownames (gene-set names)
-pValRowNames = GSAres(2:end,1);
+pValRowNames = GSAres.GS_name;
 
 
 % remove rows from data according to filtering method
@@ -172,12 +172,17 @@ colorBounds = [0,3*colorMax];
 
 %% Generate heatmap
 
+% trim very long gene set names
+maxChar = 75;
+longNames = cellfun(@(s) length(s) > maxChar, pValRowNames);
+pValRowNames(longNames) = cellfun(@(s) [s(1:maxChar) '...'], pValRowNames(longNames), 'UniformOutput', false);
+
 % use custom function to generate heatmap
 genHeatMap(pData, pValColNames, pValRowNames, 'none', [], cmap, colorBounds, 'k');
 
-% scale plot horizontally to deal with too long or short row names
+% scale plot horizontally to deal with too long or short gene set names
 maxLength = max(cellfun(@length, pValRowNames));
-scaleX = min(max(0.5, 1-maxLength/100), 0.8);  % scale between 0.5x - 0.8x
+scaleX = min(max(0.5, 1-maxLength/50), 0.8);  % scale between 0.5x - 0.8x
 pos = get(gca,'Position');
 set(gca,'Position',pos .* [1 1 scaleX 1]);
 

@@ -681,24 +681,43 @@ if ~isempty(dirs)
 end
 
 
-% collect results
-GSAres = [{'GS_name', 'GS_size', 'stat_nondir', 'p_nondir', 'padj_nondir'};
-    GSnames,num2cell([GSsizes, statvals_nondir, GS_pval_nondir, GS_padj_nondir])];
+% % collect results (cell array)
+% GSAres = [{'GS_name', 'GS_size', 'stat_nondir', 'p_nondir', 'padj_nondir'};
+%     GSnames,num2cell([GSsizes, statvals_nondir, GS_pval_nondir, GS_padj_nondir])];
+% 
+% if ~isempty(dirs) || strcmpi(method,'gsea')
+%     
+%     GSAres = [GSAres, [{'stat_mixup', 'p_mixup', 'padj_mixup', ...
+%         'stat_mixdn', 'p_mixdn', 'padj_mixdn'};
+%         num2cell([statvals_mixup, GS_pval_mixup, GS_padj_mixup, ...
+%         statvals_mixdn, GS_pval_mixdn, GS_padj_mixdn])]];
+%     
+%     if ismember(lower(method),{'reporter','stouffer','wilcoxon','mean','median','gsea'})
+%         GSAres = [GSAres, [{'stat_distup', 'p_distup', 'padj_distup', ...
+%             'stat_distdn', 'p_distdn', 'padj_distdn'};
+%             num2cell([statvals_distup, GS_pval_distup, GS_padj_distup, ...
+%             statvals_distdn, GS_pval_distdn, GS_padj_distdn])]];
+%     end
+% end
+
+% collect results into a table
+GSAres = table(GSnames,GSsizes,statvals_nondir,GS_pval_nondir,GS_padj_nondir);
+GSAres.Properties.VariableNames = {'GS_name','GS_size','stat_nondir','p_nondir','padj_nondir'};
 
 if ~isempty(dirs) || strcmpi(method,'gsea')
     
-    GSAres = [GSAres, [{'stat_mixup', 'p_mixup', 'padj_mixup', ...
-        'stat_mixdn', 'p_mixdn', 'padj_mixdn'};
-        num2cell([statvals_mixup, GS_pval_mixup, GS_padj_mixup, ...
-        statvals_mixdn, GS_pval_mixdn, GS_padj_mixdn])]];
+    GSAres = [GSAres, table(statvals_mixup,GS_pval_mixup,GS_padj_mixup, ...
+        statvals_mixdn,GS_pval_mixdn,GS_padj_mixdn)];
+    GSAres.Properties.VariableNames(end-5:end) = ...
+        {'stat_mixup','p_mixup','padj_mixup','stat_mixdn','p_mixdn','padj_mixdn'};
     
     if ismember(lower(method),{'reporter','stouffer','wilcoxon','mean','median','gsea'})
-        GSAres = [GSAres, [{'stat_distup', 'p_distup', 'padj_distup', ...
-            'stat_distdn', 'p_distdn', 'padj_distdn'};
-            num2cell([statvals_distup, GS_pval_distup, GS_padj_distup, ...
-            statvals_distdn, GS_pval_distdn, GS_padj_distdn])]];
+        
+        GSAres = [GSAres, table(statvals_distup,GS_pval_distup,GS_padj_distup, ...
+            statvals_distdn,GS_pval_distdn,GS_padj_distdn)];
+        GSAres.Properties.VariableNames(end-5:end) = ...
+            {'stat_distup','p_distup','padj_distup','stat_distdn','p_distdn','padj_distdn'};
     end
-
 end
 
 
