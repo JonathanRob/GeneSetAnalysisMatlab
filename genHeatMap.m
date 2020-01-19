@@ -98,6 +98,7 @@ end
 sortdata(end+1,end+1) = 0;
 
 % generate pcolor plot
+figure;
 a = axes;
 set(a,'YAxisLocation','Right','XTick',[],'YTick', (1:size(sortdata,1))+0.5,'YTickLabels',sortrows);
 set(a,'TickLength',[0 0],'XLim',[1 size(sortdata,2)],'YLim',[1 size(sortdata,1)]);
