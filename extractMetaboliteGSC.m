@@ -68,5 +68,8 @@ gsc = [metNames(met_ind), model.genes(gene_ind)];
 [~,keep] = unique(G2Mnum,'rows');
 gsc = gsc(keep,:);
 
+% print GSC stats
+fprintf('Gene set collection contains %u gene sets and %u unique genes.\n', ...
+    length(unique(gsc(:,1))),length(unique(gsc(:,2))));
 
 

@@ -69,4 +69,8 @@ S2G_ind = unique([subsys_ind,gene_ind],'rows');
 % convert back to names
 gsc = [uniq_subsys(S2G_ind(:,1)),model.genes(S2G_ind(:,2))];
 
+% print GSC stats
+fprintf('Gene set collection contains %u gene sets and %u unique genes.\n', ...
+    length(unique(gsc(:,1))),length(unique(gsc(:,2))));
+
 
