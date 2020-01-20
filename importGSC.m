@@ -36,7 +36,8 @@ gsc = vertcat(z{:});
 % (this is to avoid formatting issues if the set names are plotted)
 gsc(:,1) = strrep(gsc(:,1),'_','-');
 
-fprintf('Gene set collection contains %u gene sets and %u unique genes.\n',length(unique(gsc(:,1))),length(unique(gsc(:,2))));
+fprintf('Gene set collection contains %u gene sets and %u unique genes.\n', ...
+    length(unique(gsc(:,1))),length(unique(gsc(:,2))));
 
 end
 
