@@ -1,5 +1,12 @@
 # GeneSetAnalysisMatlab
 
-This is a collection of Matlab functions used to perform a gene set analysis (GSA) and visualize the results.
+**Gene Set Analysis Matlab (GSAM)** is a collection of MATLAB functions used to perform gene set analyses (GSAs) and visualize the results.
 
-Note that this tool is still under development, so use at your own risk. Feedback is of course welcome.
+## Installation
+
+To install, simply clone this repository (or download the files) to your local machine, and add the `GeneSetAnalysisMatlab` directory to your MATLAB path (Home > Set Path > Add Folder...).
+
+## User guide
+
+Follow [this link to the GSAM user guide](https://jonathanrob.github.io/GeneSetAnalysisMatlab-doc/).
+
