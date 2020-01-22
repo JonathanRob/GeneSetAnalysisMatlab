@@ -246,13 +246,13 @@ if istable(GSAres)
     % color in CMAP.
     cmap = [cmap_down; cmap_nondir; cmap_up];
     if length(colnames) == 5
-        pData(:,1:2) = min(pData(:,1:2),0.999999*colorMax);
-        pData(:,3)   = min(pData(:,3) + 1.000001*colorMax,1.999999*colorMax);
-        pData(:,4:5) = min(pData(:,4:5) + 2.000001*colorMax,2.999999*colorMax);
+        log_pData(:,1:2) = min(log_pData(:,1:2),0.999999*colorMax);
+        log_pData(:,3)   = min(log_pData(:,3) + 1.000001*colorMax,1.999999*colorMax);
+        log_pData(:,4:5) = min(log_pData(:,4:5) + 2.000001*colorMax,2.999999*colorMax);
     elseif length(colnames) == 3
-        pData(:,1) = min(pData(:,1),0.999999*colorMax);
-        pData(:,2) = min(pData(:,2) + 1.000001*colorMax,1.999999*colorMax);
-        pData(:,3) = min(pData(:,3) + 2.000001*colorMax,2.999999*colorMax);
+        log_pData(:,1) = min(log_pData(:,1),0.999999*colorMax);
+        log_pData(:,2) = min(log_pData(:,2) + 1.000001*colorMax,1.999999*colorMax);
+        log_pData(:,3) = min(log_pData(:,3) + 2.000001*colorMax,2.999999*colorMax);
     else
         error('Incorrect number of columns.');
     end
@@ -264,7 +264,7 @@ if istable(GSAres)
     rownames(longNames) = cellfun(@(s) [s(1:maxChar) '...'], rownames(longNames), 'UniformOutput', false);
     
     % generate heatmap
-    genHeatMap(pData, colnames, rownames, 'none', [], cmap, colorBounds, 'k');
+    genHeatMap(log_pData, colnames, rownames, 'none', [], cmap, colorBounds, 'k');
     
     % scale plot horizontally to deal with too long or short gene set names
     maxLength = max(cellfun(@length, rownames));
@@ -274,12 +274,12 @@ if istable(GSAres)
     
     % add custom colorbars
     % reduce figure height to make room for the colorbars
-    scaleY = min(0.85, 0.75 + size(pData,1)*0.002);
+    scaleY = min(0.85, 0.75 + size(log_pData,1)*0.002);
     plotPos = get(gca,'Position') .* [1 1 1 scaleY];
     set(gca,'Position', plotPos);
     
     % determine the position of the colorbars based on the plot position
-    cbar_width = max(0.02, 0.04 - size(pData,1)*0.001);  % scale width based on number of rows
+    cbar_width = max(0.02, 0.04 - size(log_pData,1)*0.001);  % scale width based on number of rows
     c1Pos = [plotPos(1), plotPos(2)+plotPos(4)+0.02, plotPos(3), cbar_width];
     c2Pos = [plotPos(1), plotPos(2)+plotPos(4)+0.02+1.5*cbar_width, plotPos(3), cbar_width];
     c3Pos = [plotPos(1), plotPos(2)+plotPos(4)+0.02+3.0*cbar_width, plotPos(3), cbar_width];
