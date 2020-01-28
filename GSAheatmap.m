@@ -154,7 +154,7 @@ elseif iscell(GSAres)  % array of multiple GSA result tables
     GSnames_union = unique(vertcat(GSnames{:}));
     GSremoved = setdiff(GSnames_union, GSnames_intersect);
     if ~isempty(GSremoved)
-        fprintf('\nWarning! The following gene sets are not present in all GSAres tables and were therefore excluded:\n');
+        fprintf('\nWarning! The following gene sets are not present in all GSAres tables and will therefore be ignored:\n');
         fprintf('\t%s\n',GSremoved{1:min(5,numel(GSremoved))});  % only print first 5
         if numel(GSremoved) > 5
             fprintf('\t...and %u more.\n\n',numel(GSremoved)-5);
