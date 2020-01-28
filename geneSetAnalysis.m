@@ -1,30 +1,36 @@
 function [GSAres,GSCproc] = geneSetAnalysis(...
-    genes,pvals,dirs,gsc,method,nperms,GS_size_bounds,stat_type)
+    genes,pvals,dirs,gsc,method,nperms,GS_size_bounds,stat_type,colnames)
 %geneSetAnalysis  Perform a gene set analysis (GSA).
 %
-% Performs a GSA given gene-level statistics (pvals) and directionality
-% (dirs) for each gene, using gene sets defined by the GSC and the
+% Performs a GSA given gene-level statistics (PVALS) and directionality
+% (DIRS) for each gene, using gene sets defined by the GSC and the
 % specified method of calculating the test-statistic. geneSetAnalysis
 % returns the calculated gene set sizes and p-values in GSAres, as well as
 % the processed list of gene sets (GSCproc) if requested.
+%
+% If multiple datasets are provided (i.e., PVALS has more than one column),
+% the function will run a GSA on each column separately, and the results
+% wil be returned as an array of tables.
 %
 %
 % Usage:
 %
 %   [GSAres,GSCproc] = geneSetAnalysis( ...
-%       genes,pvals,dirs,gsc,method,nperms,GS_size_bounds,stat_type);
+%       genes,pvals,dirs,gsc,method,nperms,GS_size_bounds,stat_type,colnames);
 %
 %
 % Input:
 %
-%   genes       Column of gene names or identifiers corresponding to data
+%   genes       Vector of gene names or identifiers corresponding to data
 %               in PVALS and DIRS. The names or identifiers used in GENES
 %               should be consistent with those in the gene set collection
 %               (GSC) input (see below).
 %
-%   pvals       Column vector of gene-level statistics (e.g., p-values)
-%               corresponding to GENES. If the statistics are not p-like,
-%               it should be specified in the STAT_TYPE input (see below).
+%   pvals       Vector or matrix of gene-level statistics (e.g., p-values)
+%               corresponding to GENES. If PVALS is a matrix, the rows
+%               should correspond to GENES. If the statistics are not
+%               p-like, it should be specified in the STAT_TYPE input
+%               (see below).
 %
 %   dirs        Column vector of directions associated with each gene:
 %               (up = 1, down = -1, no change = 0). 
@@ -82,12 +88,22 @@ function [GSAres,GSCproc] = geneSetAnalysis(...
 %                           Numbers with a greater value will be considered
 %                           to indicate a greater score or "significance".
 %
+%   colnames    A cell array of names corresponding to the columns of PVALS
+%               (if PVALS is a matrix) that will be used to label each of 
+%               the table(s) contained within the GSAres array (using the
+%               "Properties.Description" field of the table). If PVALS is a
+%               vector, COLNAMES can be omitted or provided as a string.
+%               If PVALS is a matrix and COLNAMES are not provided, the
+%               default names will be 'Data1', 'Data2', etc.
+%
 %
 % Output:
 %
-%   GSAres      A cell array containing the GSA results, including gene set
+%   GSAres      A table containing the GSA results, including gene set
 %               names and sizes, and their associated p-values (raw and
 %               adjusted) for each of the relevant directionality classes.
+%               If PVALS is a matrix, GSAres will be returned as a cell
+%               array of tables.
 %
 %   GSCproc     The processed gene set collection (GSC) cell array that is
 %               used in the gene set analysis. This is the resulting GSC
@@ -106,14 +122,21 @@ if strcmpi(method,'GSEA')
     error('The GSEA method is not yet available.');
 end
 
-if nargin < 8
-    stat_type = 'p';
+if nargin < 6 || isempty(nperms)
+    nperms = 10000;
 end
 if nargin < 7 || isempty(GS_size_bounds)
     GS_size_bounds = [5,Inf];
 end
-if nargin < 6 || isempty(nperms)
-    nperms = 10000;
+if nargin < 8 || isempty(stat_type)
+    stat_type = 'p';
+end
+if nargin < 9
+    colnames = [];
+end
+
+if ~isempty(dirs) && ~all(size(dirs) == size(pvals))
+    error('PVALS and DIRS must have the same dimensions.');
 end
 
 if ~ismember(stat_type,{'p','other'})
@@ -130,6 +153,29 @@ if ismember(lower(method),{'fisher','reporter','stouffer'}) && ~strcmpi(stat_typ
     error('Fisher, Reporter, and Stouffer methods are only valid for p-like statistics (STAT_TYPE = "P").');
 end
 
+% if pvals is a matrix, run each column separately and combine results
+if min(size(pvals)) > 1
+    Ndata = size(pvals,2);
+    if isempty(colnames)
+        colnames = strcat('Data', arrayfun(@num2str,(1:5)','UniformOutput',false));
+    elseif numel(colnames) < Ndata
+        error('Number of entries in COLNAMES must match the number of columns in PVALS');
+    end
+    GSAres = cell(Ndata,1);
+    for i = 1:Ndata
+        fprintf('\n\n##### Running GSA on %s (run %u of %u) #####\n\n',colnames{i},i,Ndata);
+        if ~isempty(dirs)
+            d = dirs(:,i);
+        else
+            % since we cannot reference dirs(:,i) of an empty array
+            d = [];
+        end
+        % call function recursively
+        [GSAres{i},GSCproc] = geneSetAnalysis(...
+            genes,pvals(:,i),d,gsc,method,nperms,GS_size_bounds,stat_type,colnames{i});
+    end
+    return
+end
 
 % convert inputs to columns in case they are supplied as row vectors
 genes = genes(:);
@@ -720,6 +766,13 @@ if ~isempty(dirs) || strcmpi(method,'gsea')
     end
 end
 
+% label table if "colnames" is provided
+if ~isempty(colnames)
+    if iscell(colnames)
+        colnames = colnames{1};
+    end
+    GSAres.Properties.Description = colnames;
+end
 
 end
 
