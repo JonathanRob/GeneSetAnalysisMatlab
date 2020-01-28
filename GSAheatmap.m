@@ -161,7 +161,7 @@ elseif iscell(GSAres)  % array of multiple GSA result tables
         end
     end
     
-    [pData_nondir,pData_distdn,pData_distup] = deal(zeros(numel(GSnames_intersect),numel(GSAres)));
+    [pData_nondir,pData_distdn,pData_distup] = deal(ones(numel(GSnames_intersect),numel(GSAres)));
     for i = 1:numel(GSAres)
         [~,ind] = ismember(GSnames_intersect, GSAres{i}.GS_name);
         if ~(adjusted)
