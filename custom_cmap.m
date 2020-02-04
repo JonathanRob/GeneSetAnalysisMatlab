@@ -27,7 +27,7 @@ function cmap = custom_cmap(colors,n,fractions)
 %   cmap        An Nx3 matrix of RGB values comprising a colormap.
 %
 %
-% Jonathan Robinson, 2019-02-27
+% Jonathan Robinson, 2020-02-03
 
 
 if nargin < 2 || isempty(n)
@@ -52,11 +52,15 @@ if ~isnumeric(colors)
             cmap = custom_cmap([0.015,0.106,0.247; 0.031,0.227,0.416; 0.055,0.361,0.580; 0.400,0.592,0.690; 0.706,0.804,0.875],n);
         case 'magma'
             cmap = custom_cmap([15,15,19; 42,0,92; 117,15,110; 211,51,86; 253,144,91; 251,255,178]./255,n);
+        case 'whitemagma'
+            cmap = custom_cmap([15,15,19; 42,0,92; 117,15,110; 211,51,86; 253,144,91; 251,255,178; 255,255,255]./255,n,...
+                [0.165;0.165;0.165;0.165;0.165;0.165;0.01]);
+            cmap(1,:) = [1,1,1];  % ensure that last value is pure white
         case 'redbluedark'
             cmap = custom_cmap([0.573,0.216,0.212; 1,1,1; 0.039,0.345,0.529],n);
         case 'preview'
             % preview all pre-defined colormap options
-            cmap_list = {'redblue';'redbluebright';'redbluedark';'green';'blue';'darkblue';'magma'};
+            cmap_list = {'redblue';'redbluebright';'redbluedark';'green';'blue';'darkblue';'magma';'whitemagma'};
             Ncmap = length(cmap_list);
             cmap = [];
             for i = 1:length(cmap_list)
@@ -64,6 +68,7 @@ if ~isnumeric(colors)
             end
             plotmat = flipud(reshape(0:(200*Ncmap-1),200,length(cmap_list))');
             plotmat(end+1,end+1) = 0;
+            figure;
             h = pcolor(plotmat); hold on
             set(h,'EdgeColor','none');
             set(gca,'YTick',(1:Ncmap)+0.5,'YTickLabels',flipud(cmap_list),'FontSize',14);
