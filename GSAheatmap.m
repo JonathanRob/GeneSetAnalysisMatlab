@@ -329,7 +329,7 @@ elseif iscell(GSAres)
     end
     
      % plot distinct-directional p-value heatmap
-    if ismember(dirType,{'distdir','both'}) && ~isempty(log_pData_distdir)
+    if ismember(dirType,{'dir','both'}) && ~isempty(log_pData_distdir)
         % trim very long gene set names
         maxChar = 75;
         longNames = cellfun(@(s) length(s) > maxChar, rownames_distdir);
