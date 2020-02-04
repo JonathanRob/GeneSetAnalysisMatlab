@@ -1,4 +1,4 @@
-function gsc = extractSubsystemGSC(model,exclude)
+function gsc = extractSubsystemGSC(model,exclude,outfile)
 %extractSubsystemGSC  Extract subsystem gene sets from a GEM.
 %
 % Construct a get set collection from a genome-scale metabolic model (GEM),
@@ -10,7 +10,7 @@ function gsc = extractSubsystemGSC(model,exclude)
 %
 % Usage:
 %
-%   gsc = extractSubsystemGSC(model,exclude);
+%   gsc = extractSubsystemGSC(model,exclude,outfile);
 %
 %
 % Input:
@@ -19,8 +19,11 @@ function gsc = extractSubsystemGSC(model,exclude)
 %
 %   exclude   A list of subsystems to exclude (case insensitive).
 %             For example "Artificial reactions" or "Pool reactions".
-%             (Opt, default none).
+%             (Opt, Default = none).
 %
+%   outfile   File name to which the GSC will be written. See the
+%             "exportGSC" function for more detail. 
+%             (Opt, Default = No file will be written)
 %
 % Output:
 %
@@ -30,11 +33,14 @@ function gsc = extractSubsystemGSC(model,exclude)
 %            the genes associated with each gene set.
 %
 %
-% Jonathan Robinson, 2020-01-13
+% Jonathan Robinson, 2020-02-04
 
 
 if nargin < 2
     exclude = [];
+end
+if nargin < 3
+    outfile = [];
 end
 
 % get subsystem names
@@ -73,4 +79,10 @@ gsc = [uniq_subsys(S2G_ind(:,1)),model.genes(S2G_ind(:,2))];
 fprintf('Gene set collection contains %u gene sets and %u unique genes.\n', ...
     length(unique(gsc(:,1))),length(unique(gsc(:,2))));
 
+% write to file if requested
+if ~isempty(outfile)
+    fprintf('Writing GSC to file... ');
+    exportGSC(gsc,outfile);
+    fprintf('Done.\n');
+end
 
