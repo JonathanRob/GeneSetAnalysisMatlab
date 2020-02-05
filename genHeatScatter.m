@@ -33,7 +33,7 @@ function [] = genHeatScatter(sizedata,colordata,colnames,rownames,cluster_by,clu
 %                  (DEFAULT = 'euclidean')
 %
 %   col_map      Colormap to which COLORDATA will be mapped.
-%               (DEFAULT = custom 'redblue' colormap)
+%               (DEFAULT = custom 'whitemagma' colormap)
 %
 %   sizebounds  A 2-element vector indicating the min and max values in
 %               SIZEDATA to which the point sizes will be scaled. Values at
@@ -64,8 +64,7 @@ function [] = genHeatScatter(sizedata,colordata,colnames,rownames,cluster_by,clu
 %       linkage_method      algorithm used for hierarchical clustering
 %
 %
-% Jonathan Robinson, 2019-03-07
-%
+% Jonathan Robinson, 2020-02-05
 
 
 %************************** ADDITIONAL SETTINGS ***************************
@@ -94,7 +93,7 @@ if nargin < 6 || isempty(cluster_dist)
     cluster_dist = 'euclidean';
 end
 if nargin < 7 || isempty(col_map)
-    col_map = 'redblue';
+    col_map = 'whitemagma';
 end
 if nargin < 8
     sizebounds = [];
@@ -177,6 +176,7 @@ ygrid = repmat(2:ny,2,1)' - 0.5;
 
 
 % generate plot
+figure;
 a = axes;
 set(a,'YAxisLocation','Right');
 set(a,'TickLength',[0 0],'XLim',[0.5 nx+0.5],'YLim',[0.5 ny+0.5]);
@@ -209,11 +209,6 @@ end
 if ~isempty(colorbounds)
     caxis(colorbounds);
 end
-
-% draw box around plot area (probably not necessary)
-% xl = get(gca,'XLim');
-% yl = get(gca,'YLim');
-% plot(xl([1,1,2,2,1]),yl([1,2,2,1,1]),'w','LineWidth',1);
 
 % Matlab will sometimes break up figures with polygons, which can add
 % strange cuts through the figure. This command will prevent that.
