@@ -3,15 +3,17 @@ function h = genHeatMap(data,colnames,rownames,clust_dim,clust_dist,col_map,col_
 %
 % Usage:
 %
-%   genHeatMap(data,colnames,rownames,,clust_dim,clust_dist,col_map,col_bounds);
+%   genHeatMap(data,colnames,rownames,clust_dim,clust_dist,col_map,col_bounds);
 %
 % Input:
 %
 %   data        Numerical matrix.
 %
-%   colnames    Cell array of data column names.
+%   colnames    Cell array of data column names. If not provided, column
+%               index numbers will be used.
 % 
-%   rownames    Cell array of data row names.
+%   rownames    Cell array of data row names. If not provided, row index
+%               numbers will be used.
 %
 %   clust_dim   'none'  the data will be plotted as provided
 %               'rows'  cluster/rearrange the rows based on distance
@@ -26,7 +28,7 @@ function h = genHeatMap(data,colnames,rownames,clust_dim,clust_dist,col_map,col_
 %
 %   col_map     Colormap, provided as string (e.g., 'parula', 'hot', etc.)
 %               or an Nx3 RGB matrix of N colors.
-%               (DEFAULT = 'magma')
+%               (DEFAULT = 'whitemagma')
 %
 %   col_bounds  A 2-element vector with min and max values, to manually set
 %               the bounds of the colormap.
@@ -45,6 +47,12 @@ function h = genHeatMap(data,colnames,rownames,clust_dim,clust_dist,col_map,col_
 
 
 % handle input arguments
+if nargin < 2 || isempty(colnames)
+    colnames = (1:size(data,2))';
+end
+if nargin < 3 || isempty(rownames)
+    rownames = (1:size(data,1))';
+end
 if nargin < 4 || isempty(clust_dim)
     clust_dim = 'both';
 elseif ~ismember(clust_dim,{'none','rows','cols','both'})
@@ -54,7 +62,7 @@ if nargin < 5 || isempty(clust_dist)
     clust_dist = 'euclidean';
 end
 if nargin < 6 || isempty(col_map)
-    col_map = 'magma';
+    col_map = 'whitemagma';
 end
 if nargin < 7 || isempty(col_bounds)
     col_bounds = [min(data(:)),max(data(:))];
