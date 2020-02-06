@@ -264,7 +264,9 @@ if istable(GSAres)
     rownames(longNames) = cellfun(@(s) [s(1:maxChar) '...'], rownames(longNames), 'UniformOutput', false);
     
     % generate heatmap
-    genHeatMap(log_pData, colnames, rownames, 'none', [], cmap, colorBounds, 'k');
+    genHeatMap(log_pData, 'colNames', colnames, 'rowNames', rownames, ...
+        'clusterDim', 'none', 'colorMap', cmap, 'colorBounds', colorBounds, ...
+        'gridColor', 'k');
     
     % scale plot horizontally to deal with too long or short gene set names
     maxLength = max(cellfun(@length, rownames));
@@ -314,8 +316,10 @@ elseif iscell(GSAres)
         rownames_nondir(longNames) = cellfun(@(s) [s(1:maxChar) '...'], rownames_nondir(longNames), 'UniformOutput', false);
         
         % generate heatmap
-        genHeatMap(log_pData_nondir, colnames, rownames_nondir, 'both', ...
-            'euclid', custom_cmap('magma'), [0,colorMax], 'k');
+        genHeatMap(log_pData_nondir, 'colNames', colnames, 'rowNames', ...
+            rownames_nondir, 'clusterDim', 'both', 'clusterDist', 'euclid', ...
+            'colorMap', custom_cmap('magma'), 'colorBounds', [0,colorMax], ...
+            'gridColor','k');
         
         % scale plot horizontally to deal with too long or short gene set names
         maxLength = max(cellfun(@length, rownames_nondir));
@@ -336,8 +340,10 @@ elseif iscell(GSAres)
         rownames_distdir(longNames) = cellfun(@(s) [s(1:maxChar) '...'], rownames_distdir(longNames), 'UniformOutput', false);
         
         % generate heatmap
-        genHeatMap(log_pData_distdir, colnames, rownames_distdir, 'both', ...
-            'euclid', custom_cmap('redblue'), [-colorMax,colorMax], 'k');
+        genHeatMap(log_pData_distdir, 'colNames', colnames, 'rowNames', ...
+            rownames_distdir, 'clusterDim', 'both', 'clusterDist', 'euclid', ...
+            'colorMap', custom_cmap('redblue'), 'colorBounds', [-colorMax,colorMax], ...
+            'gridColor','k');
         
         % scale plot horizontally to deal with too long or short gene set names
         maxLength = max(cellfun(@length, rownames_distdir));
