@@ -63,18 +63,9 @@ opt.colormap    = 'whitemagma';
 opt.colorbounds = [min(data(:)),max(data(:))];
 opt.gridcolor   = 'none';
 opt.linkage     = 'average';
-validNames = fieldnames(opt);
 
-% assign optional inputs
-optNames = lower(varargin(1:2:end));
-optVals = varargin(2:2:end);
-invalidNames = setdiff(optNames,validNames);
-if ~isempty(invalidNames)
-    error('"%s" is not a valid option.\n',invalidNames{:});
-end
-for i = 1:numel(optNames)
-    opt.(optNames{i}) = optVals{i};
-end
+% overwrite defaults with input settings (if provided)
+opt = modifyOptSettings(opt,varargin);
 
 % further verify some inputs
 if ~ismember(opt.clusterdim,{'none','rows','cols','both'})

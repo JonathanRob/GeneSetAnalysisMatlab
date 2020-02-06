@@ -88,18 +88,9 @@ opt.gridcolor   = 'none';
 opt.marker      = 'o';
 opt.markeredgecolor = 'k';
 opt.markersizerange = [20 200];
-validNames = fieldnames(opt);
 
-% assign optional inputs
-optNames = lower(varargin(1:2:end));
-optVals = varargin(2:2:end);
-invalidNames = setdiff(optNames,validNames);
-if ~isempty(invalidNames)
-    error('"%s" is not a valid option.\n',invalidNames{:});
-end
-for i = 1:numel(optNames)
-    opt.(optNames{i}) = optVals{i};
-end
+% overwrite defaults with input settings (if provided)
+opt = modifyOptSettings(opt,varargin);
 
 % verify input dimensions
 if ~isequal(size(sizedata),size(colordata))
