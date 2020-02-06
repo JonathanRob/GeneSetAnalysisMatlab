@@ -1,41 +1,49 @@
-function h = genHeatMap(data,colnames,rownames,clust_dim,clust_dist,col_map,col_bounds,grid_color)
+function h = genHeatMap(data,varargin)
 %genHeatMap  Generate a heatmap for a given matrix of data.
 %
 % Usage:
 %
-%   genHeatMap(data,colnames,rownames,clust_dim,clust_dist,col_map,col_bounds);
+%   genHeatMap(data, ...);
 %
 % Input:
 %
 %   data        Numerical matrix.
 %
-%   colnames    Cell array of data column names. If not provided, column
-%               index numbers will be used.
+% Additional Settings:
+%
+%   'colNames'     A list of names of data columns.
+%                  (DEFAULT = column index numbers)
 % 
-%   rownames    Cell array of data row names. If not provided, row index
-%               numbers will be used.
+%   'rowNames'     A list of names of data rows.
+%                  (DEFAULT = row index numbers)
 %
-%   clust_dim   'none'  the data will be plotted as provided
-%               'rows'  cluster/rearrange the rows based on distance
-%               'cols'  cluster/rearrange the columns based on distance
-%               'both'  cluster/rearrange rows and columns based on
-%                       distance (DEFAULT)
+%   'clusterDim'   'none'  the data will be plotted as provided
+%                  'rows'  cluster/rearrange the rows based on distance
+%                  'cols'  cluster/rearrange the columns based on distance
+%                  'both'  (DEFAULT) cluster/rearrange rows and columns
+%                          based on distance
 %
-%   clust_dist  Distance metric to be used for clustering, ignored if
-%               clust_dim is 'none'. Options are the same as those for
-%               distance in, e.g., PDIST ('euclidean', 'hamming', etc.).
-%               (DEFAULT = 'euclidean')
+%   'clusterDist'  Distance metric to be used for clustering, ignored if
+%                  'clusterDim' is 'none'. Options are the same as those
+%                  in, e.g., PDIST ('euclidean', 'hamming', etc.).
+%                  (DEFAULT = 'euclidean')
 %
-%   col_map     Colormap, provided as string (e.g., 'parula', 'hot', etc.)
-%               or an Nx3 RGB matrix of N colors.
-%               (DEFAULT = 'whitemagma')
+%   'linkage'      String specifying the linkage method to be used for
+%                  hierarchical clustering (see built-in LINKAGE function
+%                  for options).
+%                  (DEFAULT = 'average')
 %
-%   col_bounds  A 2-element vector with min and max values, to manually set
-%               the bounds of the colormap.
-%               (DEFAULT = min/max of data)
+%   'colorBounds'  A 2-element vector with min and max values to manually
+%                  set the bounds of the colormap.
+%                  (DEFAULT = min/max of data)
 %
-%   grid_color  String or 1x3 RGB vector indicating the color of grid lines.
-%               (DEFAULT = 'none')
+%   'colorMap'     Colormap provided as string (e.g. 'parula', 'hot', etc.)
+%                  or an Nx3 RGB matrix of N colors.
+%                  (DEFAULT = 'whitemagma')
+%
+%   'gridColor'    String or 1x3 RGB vector specifying the color of grid
+%                  lines.
+%                  (DEFAULT = 'none')
 %
 % Output:
 %
@@ -43,60 +51,58 @@ function h = genHeatMap(data,colnames,rownames,clust_dim,clust_dist,col_map,col_
 %               will be plotted automatically.
 %
 %
-% Jonathan Robinson, 2019-02-27
+% Jonathan Robinson, 2020-02-06
 
 
-% handle input arguments
-if nargin < 2 || isempty(colnames)
-    colnames = (1:size(data,2))';
+% set defaults
+opt.colnames = (1:size(data,2))';
+opt.rownames = (1:size(data,1))';
+opt.clusterdim  = 'both';
+opt.clusterdist = 'euclidean';
+opt.colormap    = 'whitemagma';
+opt.colorbounds = [min(data(:)),max(data(:))];
+opt.gridcolor   = 'none';
+opt.linkage     = 'average';
+validNames = fieldnames(opt);
+
+% assign optional inputs
+optNames = lower(varargin(1:2:end));
+optVals = varargin(2:2:end);
+invalidNames = setdiff(optNames,validNames);
+if ~isempty(invalidNames)
+    error('"%s" is not a valid option.\n',invalidNames{:});
 end
-if nargin < 3 || isempty(rownames)
-    rownames = (1:size(data,1))';
-end
-if nargin < 4 || isempty(clust_dim)
-    clust_dim = 'both';
-elseif ~ismember(clust_dim,{'none','rows','cols','both'})
-    error('%s is not a valid CLUST_DIM option. Choose "none", "rows", "cols", or "both".',clust_dim);
-end
-if nargin < 5 || isempty(clust_dist)
-    clust_dist = 'euclidean';
-end
-if nargin < 6 || isempty(col_map)
-    col_map = 'whitemagma';
-end
-if nargin < 7 || isempty(col_bounds)
-    col_bounds = [min(data(:)),max(data(:))];
-end
-if nargin < 8 || isempty(grid_color)
-    grid_color = 'none';
+for i = 1:numel(optNames)
+    opt.(optNames{i}) = optVals{i};
 end
 
-% linkage algorithm for hierarchical clustering
-% (see "linkage" function for more options)
-linkage_method = 'average';
+% further verify some inputs
+if ~ismember(opt.clusterdim,{'none','rows','cols','both'})
+    error('"%s" is not a valid "clusterDim" option. Choose "none", "rows", "cols", or "both".',opt.clusterdim);
+end
 
 % perform hierarchical clustering to sort rows (if specified)
-if ismember(clust_dim,{'rows','both'})
-    L = linkage(data,linkage_method,clust_dist);
-    row_ind = optimalleaforder(L,pdist(data,clust_dist));
+if ismember(opt.clusterdim,{'rows','both'})
+    L = linkage(data,opt.linkage,opt.clusterdist);
+    row_ind = optimalleaforder(L,pdist(data,opt.clusterdist));
 else
     row_ind = 1:size(data,1);
 end
 % perform hierarchical clustering to sort columns (if specified)
-if ismember(clust_dim,{'cols','both'})
-    L = linkage(data',linkage_method,clust_dist);
-    col_ind = optimalleaforder(L,pdist(data',clust_dist));
+if ismember(opt.clusterdim,{'cols','both'})
+    L = linkage(data',opt.linkage,opt.clusterdist);
+    col_ind = optimalleaforder(L,pdist(data',opt.clusterdist));
 else
     col_ind = 1:size(data,2);
 end
 
 % reorder data matrix according to clustering results
 sortdata = data(row_ind,col_ind);
-sortrows = rownames(row_ind);
-sortcols = colnames(col_ind);
+sortrows = opt.rownames(row_ind);
+sortcols = opt.colnames(col_ind);
 
 % check if data is square matrix with identical row and column names
-if (length(colnames) == length(rownames)) && all(strcmp(colnames,rownames))
+if (length(opt.colnames) == length(opt.rownames)) && all(strcmp(opt.colnames,opt.rownames))
     % flip data so the diagonal is from upper left to lower right
     sortdata = fliplr(sortdata);
     sortcols = flipud(sortcols);
@@ -113,7 +119,7 @@ set(a,'TickLength',[0 0],'XLim',[1 size(sortdata,2)],'YLim',[1 size(sortdata,1)]
 hold on
 
 h = pcolor(sortdata);
-set(h,'EdgeColor',grid_color);
+set(h,'EdgeColor',opt.gridcolor);
 set(gca,'XTick', (1:size(sortdata,2))+0.5);
 set(gca,'YTick', (1:size(sortdata,1))+0.5);
 set(gca,'XTickLabels',sortcols,'YTickLabels',sortrows);
@@ -121,13 +127,13 @@ set(gca,'XTickLabelRotation',90);
 
 % bad form to have try/catch, but it works for now
 try
-    colormap(col_map);
+    colormap(opt.colormap);
 catch
-    colormap(custom_cmap(col_map));
+    colormap(custom_cmap(opt.colormap));
 end
 
-if ~isempty(col_bounds)
-    caxis(col_bounds);
+if ~isempty(opt.colorbounds)
+    caxis(opt.colorbounds);
 end
 
 
