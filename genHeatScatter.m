@@ -1,142 +1,141 @@
-function [] = genHeatScatter(sizedata,colordata,colnames,rownames,cluster_by,cluster_dist,col_map,sizebounds,colorbounds)
-%genHeatScatter  Generate a heat-scatter plot with varing cell size/color.
+function [] = genHeatScatter(sizedata,colordata,varargin)
+%genHeatScatter  Generate a heatscatter plot with varing marker size/color
 %
 % Usage:
 %
-%   genHeatScatter(sizedata, colordata, colnames, rownames, cluster_by, ...
-%                  cluster_dist, col_map, sizebounds, colorbounds);
+%   genHeatScatter(sizedata, colordata, ...);
 %
-% Inputs:
+% Input:
 %
 %   sizedata     Matrix of data corresponding to the size of the markers.
 %
 %   colordata    Matrix of data corresponding to the colors of the markers.
 %
-%   colnames     A list of names of data columns. If not provided, column
-%                index numbers will be used.
+% Optional Settings:
+%
+%   'colNames'     A list of names of data columns.
+%                  (DEFAULT = column index numbers)
 % 
-%   rownames     A list of names of data rows. If not provided, row index
-%                numbers will be used.
+%   'rowNames'     A list of names of data rows.
+%                  (DEFAULT = row index numbers)
 %
-%   cluster_by  'none'  - the data will be plotted as provided (DEFAULT)
-%               'color' - cluster/rearrange rows and columns based on their
-%                         distances in COLORDATA
-%               'size'  - cluster/rearrange rows and columns based on their
-%                         distances in SIZEDATA
-%               'both'  - cluster/rearrange rows and columns based on their
-%                         distances in a matrix obtained by normalizing
-%                         COLORDATA and SIZEDATA from 0 to 1 and averaging
+%   'clusterDim'  'none'  - the data will be plotted as provided
+%                 'color' - cluster/rearrange rows and columns based on
+%                           their distances in COLORDATA
+%                 'size'  - cluster/rearrange rows and columns based on
+%                           their distances in SIZEDATA
+%                 'both'  - (DEFAULT) cluster/rearrange rows and columns
+%                           based on their distances in a matrix obtained
+%                           by mean-centering and scaling COLORDATA and
+%                           SIZEDATA to unit variance
 %
-%   cluster_dist   Distance metric to be used for clustering, ignored if
-%                  CLUST_DIM is 'none'. Options are the same as those for
-%                  distance in, e.g., PDIST ('euclidean', 'hamming', etc.).
-%                  (DEFAULT = 'euclidean')
+%   'clusterDist'   Distance metric to be used for clustering, ignored if
+%                   'clusterDim' is 'none'. Options are the same as those
+%                   for distance in PDIST ('euclidean', 'hamming', etc.).
+%                   (DEFAULT = 'euclidean')
 %
-%   col_map      Colormap to which COLORDATA will be mapped.
-%               (DEFAULT = custom 'whitemagma' colormap)
+%   'linkage'       String specifying the linkage method to be used for
+%                   hierarchical clustering (see built-in LINKAGE function
+%                   function for options).
+%                   (DEFAULT = 'average')
 %
-%   sizebounds  A 2-element vector indicating the min and max values in
-%               SIZEDATA to which the point sizes will be scaled. Values at
-%               or below the min value in SIZEBOUNDS will be set to the
-%               minimum point size, whereas values at or above the max 
-%               value in SIZEBOUNDS will be set to the maximum point size.
-%               (Default = min and max of SIZEDATA)
+%   'sizeBounds'    A 2-element vector specifying the min and max values in
+%                   SIZEDATA to which the point sizes will be scaled.
+%                   Values at or below the min value in SIZEBOUNDS will be
+%                   set to the minimum point size, whereas values at or
+%                   above the max value in SIZEBOUNDS will be set to the
+%                   maximum point size. 
+%                   (DEFAULT = min and max of SIZEDATA)
 %
-%              *** NOTE: To adjust the min and max point sizes, change
-%                        the SIZE_LIMS in the "additional settings"
-%                        hard-coded below.
+%   'colorBounds'   A 2-element vector specifying the min and max values in
+%                   COLORDATA to which the point colors will be scaled.
+%                   Values at or below the min value in COLORBOUNDS will be
+%                   set to the first color in the colormap, whereas values
+%                   at or above the max value in COLORBOUNDS will be set to
+%                   the last color. 
+%                   (DEFAULT = min and max of COLORDATA)
 %
-%   colorbounds A 2-element vector indicating the min and max values in
-%               COLORDATA to which the point colors will be scaled. Values 
-%               at or below the min value in COLORBOUNDS will be set to the
-%               first color in the colormap, whereas values at or above the 
-%               max value in COLORBOUNDS will be set to the last color.
-%               (Default = min and max of COLORDATA)
+%   'colorMap'      Colormap to which COLORDATA will be mapped.
+%                   (DEFAULT = custom 'whitemagma' colormap)
+%
+%   'gridColor'     Color of the grid.
+%                   (DEFAULT = 'none')
+%
+%   'marker'        Marker shape.
+%                   (DEFAULT = 'o')
+%
+%   'markerEdgeColor'   Color of marker edges (can also be 'none')
+%                       (DEFAULT = 'k')
+%
+%   'markerSizeRange'   A 2-element vector specifying the minimum and
+%                       maximum sizes between which the markers will vary.
+%                       (DEFAULT = [20 200])
 %
 %
-% The following additional parameters can be modified within the function
-% file itself:
-%
-%       size_lims           range of marker sizes
-%       marker              shape of markers (square, circle, star, etc.)
-%       marker_edge_color   color of marker edges (none, black, red, etc.)
-%       grid_color          color of grid (none, black, gray, etc.)
-%       linkage_method      algorithm used for hierarchical clustering
-%
-%
-% Jonathan Robinson, 2020-02-05
+% Jonathan Robinson, 2020-02-06
 
 
-%************************** ADDITIONAL SETTINGS ***************************
-% Some additional minor settings to avoid too many function inputs.
+% set defaults
+opt.colnames = (1:size(colordata,2))';
+opt.rownames = (1:size(colordata,1))';
+opt.clusterdim  = 'both';
+opt.clusterdist = 'euclidean';
+opt.linkage     = 'average';
+opt.sizebounds  = [min(sizedata(:)), max(sizedata(:))];
+opt.colorbounds = [min(colordata(:)), max(colordata(:))];
+opt.colormap    = 'whitemagma';
+opt.gridcolor   = 'none';
+opt.marker      = 'o';
+opt.markeredgecolor = 'k';
+opt.markersizerange = [20 200];
+validNames = fieldnames(opt);
 
-size_lims = [20 200];  % adjusts the range of point sizes
-marker = 'o';  % shape of marker to plot ('o' circle, 's' square, etc.)
-marker_edge_color = 'k';  % e.g., 'k' for black, 'none' for no edges
-grid_color = 'none';  % e.g., 'k' for black, 'none' for no grid
-linkage_method = 'average';  % linkage algorithm for hierarchical clustering (see linkage function for more options)
-
-%**************************************************************************
-
-
-% handle input arguments and assign default values
-if nargin < 3 || isempty(colnames)
-    colnames = (1:size(colordata,2))';
+% assign optional inputs
+optNames = lower(varargin(1:2:end));
+optVals = varargin(2:2:end);
+invalidNames = setdiff(optNames,validNames);
+if ~isempty(invalidNames)
+    error('"%s" is not a valid option.\n',invalidNames{:});
 end
-if nargin < 4 || isempty(rownames)
-    rownames = (1:size(colordata,1))';
-end
-if nargin < 5 || isempty(cluster_by)
-    cluster_by = 'none';
-end
-if nargin < 6 || isempty(cluster_dist)
-    cluster_dist = 'euclidean';
-end
-if nargin < 7 || isempty(col_map)
-    col_map = 'whitemagma';
-end
-if nargin < 8
-    sizebounds = [];
-end
-if nargin < 9
-    colorbounds = [];
+for i = 1:numel(optNames)
+    opt.(optNames{i}) = optVals{i};
 end
 
 % verify input dimensions
 if ~isequal(size(sizedata),size(colordata))
     error('"sizedata" and "colordata" must have the same dimensions.');
 end
-if length(colnames) ~= size(colordata,2)
+if length(opt.colnames) ~= size(colordata,2)
     error('"colnames" must have the same numer of entries as columns in "sizedata" and "colordata".');
 end
-if length(rownames) ~= size(colordata,1)
+if length(opt.rownames) ~= size(colordata,1)
     error('"rownames" must have the same numer of entries as rows in "sizedata" and "colordata".');
 end
 
 % determine data upon which to perform clustering 
-switch cluster_by
+switch opt.clusterdim
     case 'size'
-        clust_data = sizedata;
+        clustdata = sizedata;
     case 'color'
-        clust_data = colordata;
+        clustdata = colordata;
     case 'both'
         % normalize and average size and color data
         sizedata_norm = (sizedata - min(sizedata(:)))./var(sizedata(:),'omitnan');
         sizedata_norm(isnan(sizedata_norm)) = 0;  % remove NaNs
         colordata_norm = (colordata - min(colordata(:)))./var(colordata(:),'omitnan');
         colordata_norm(isnan(colordata_norm)) = 0;  % remove NaNs
-        clust_data = (sizedata_norm + colordata_norm)./2;
+        clustdata = (sizedata_norm + colordata_norm)./2;
     otherwise
-        clust_data = [];
+        clustdata = [];
 end
-clust_data(isnan(clust_data)) = 0;  % not ideal, but one way to deal with NaNs
+clustdata(isnan(clustdata)) = 0;  % not ideal, but one way to deal with NaNs
 
 % perform hierarchical clustering to sort rows and columns (if specified)
-if ~isempty(clust_data)
-    L = linkage(clust_data,linkage_method,cluster_dist);
-    row_ind = optimalleaforder(L,pdist(clust_data,cluster_dist));
-    L = linkage(clust_data',linkage_method,cluster_dist);
-    col_ind = optimalleaforder(L,pdist(clust_data',cluster_dist));
+if ~isempty(clustdata)
+    L = linkage(clustdata, opt.linkage, opt.clusterdist);
+    row_ind = optimalleaforder(L, pdist(clustdata, opt.clusterdist));
+    L = linkage(clustdata', opt.linkage, opt.clusterdist);
+    col_ind = optimalleaforder(L, pdist(clustdata', opt.clusterdist));
 else
     row_ind = 1:size(sizedata,1);
     col_ind = 1:size(sizedata,2);
@@ -145,11 +144,11 @@ end
 % reorder data matrix according to clustering results
 sizedata_sort = sizedata(row_ind,col_ind);
 colordata_sort = colordata(row_ind,col_ind);
-sortrows = rownames(row_ind);
-sortcols = colnames(col_ind);
+sortrows = opt.rownames(row_ind);
+sortcols = opt.colnames(col_ind);
 
 % check if data is square matrix with identical row and column names
-if (length(colnames) == length(rownames)) && all(strcmp(colnames,rownames))
+if (length(opt.colnames) == length(opt.rownames)) && all(strcmp(opt.colnames,opt.rownames))
     % flip data so the diagonal is from upper left to lower right
     sizedata_sort = fliplr(sizedata_sort);
     colordata_sort = fliplr(colordata_sort);
@@ -157,13 +156,9 @@ if (length(colnames) == length(rownames)) && all(strcmp(colnames,rownames))
 end
 
 % scale data for plotting
-if ~isempty(sizebounds)
-    sizedata_sort(sizedata_sort < sizebounds(1)) = sizebounds(1);
-    sizedata_sort(sizedata_sort > sizebounds(2)) = sizebounds(2);
-else
-    sizebounds = [min(sizedata_sort(:)),max(sizedata_sort(:))];
-end
-sizedata_sort = range(size_lims)/range(sizebounds)*(sizedata_sort - sizebounds(1))+size_lims(1);
+sizedata_sort(sizedata_sort < opt.sizebounds(1)) = opt.sizebounds(1);
+sizedata_sort(sizedata_sort > opt.sizebounds(2)) = opt.sizebounds(2);
+sizedata_sort = range(opt.markersizerange) / range(opt.sizebounds) * (sizedata_sort - opt.sizebounds(1)) + opt.markersizerange(1);
 
 % generate point locations
 [ny,nx] = size(sizedata_sort);
@@ -183,16 +178,16 @@ set(a,'TickLength',[0 0],'XLim',[0.5 nx+0.5],'YLim',[0.5 ny+0.5]);
 hold on
 
 % draw grid lines
-if ~isempty(grid_color) && ~strcmpi(grid_color,'none')
-    line(xgrid,[0.5,ny+0.5],'color',grid_color);
-    line([0.5,nx+0.5],ygrid,'color',grid_color);
+if ~isempty(opt.gridcolor) && ~strcmpi(opt.gridcolor,'none')
+    line(xgrid,[0.5,ny+0.5],'color',opt.gridcolor);
+    line([0.5,nx+0.5],ygrid,'color',opt.gridcolor);
 end
 
 % draw points
-if strcmpi(marker_edge_color,'none')
-    scatter(x,y,sizedata_sort(:),colordata_sort(:),marker,'filled');
+if strcmpi(opt.markeredgecolor,'none')
+    scatter(x,y,sizedata_sort(:),colordata_sort(:),opt.marker,'filled');
 else
-    scatter(x,y,sizedata_sort(:),colordata_sort(:),marker,'filled','MarkerEdgeColor',marker_edge_color,'LineWidth',0.5);
+    scatter(x,y,sizedata_sort(:),colordata_sort(:),opt.marker,'filled','MarkerEdgeColor',opt.markeredgecolor,'LineWidth',0.5);
 end
 set(gca,'XTick', 1:nx);
 set(gca,'YTick', 1:ny);
@@ -201,13 +196,13 @@ set(gca,'XTickLabelRotation',90);
 
 % bad form to have try/catch, but it works for now
 try
-    colormap(col_map);  % check if Matlab colormap exists
+    colormap(opt.colormap);  % check if Matlab colormap exists
 catch
-    colormap(custom_cmap(col_map));  % check if custom colormap exists
+    colormap(custom_cmap(opt.colormap));  % check if custom colormap exists
 end
 
-if ~isempty(colorbounds)
-    caxis(colorbounds);
+if ~isempty(opt.colorbounds)
+    caxis(opt.colorbounds);
 end
 
 % Matlab will sometimes break up figures with polygons, which can add
