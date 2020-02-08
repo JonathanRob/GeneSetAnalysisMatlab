@@ -1,10 +1,10 @@
-function [] = GSAheatmap(GSAres,adjusted,filterMethod,filterThresh,colorMax,dirType)
+function [] = GSAheatmap(GSAres,varargin)
 % GSAheatmap  Generate a heatmap to visualize GSA results.
 %
 %
 % Usage:
 %
-%   GSA_heatmap(GSAres,adjusted,filterMethod,filterThresh,colorMax);
+%   GSA_heatmap(GSAres, ...);
 %
 %
 % Inputs:
@@ -12,88 +12,110 @@ function [] = GSAheatmap(GSAres,adjusted,filterMethod,filterThresh,colorMax,dirT
 %   GSAres          GSA results structure obtained from the geneSetAnalysis
 %                   function.
 %
-%   adjusted        If TRUE, use the adjusted p-values from the GSA.
-%                   If FALSE, use the non-adjusted p-values.
-%                   (Default = TRUE)
 %
-%   filterMethod    Method for filtering out which gene sets to show in the
-%                   heatmap.
+% Additional Settings:
 %
-%                   'none'      no filtering - all gene sets will be shown
+%   'adjusted'        If TRUE, use the adjusted p-values from the GSA.
+%                     If FALSE, use the non-adjusted p-values.
+%                     (DEFAULT = TRUE)
 %
-%                   'pval'      keep gene sets that contain at least one
-%                               directionality p-value below filterThresh
+%   'filterMethod'    Method for filtering out which gene sets to show in
+%                     the heatmap.
 %
-%                   'top each'  keep the X lowest-pvalue gene sets for each
-%                               directionality type, where X = filterThresh
-%                               (Default)
+%                     'none'      no filtering - all gene sets are shown
 %
-%                   'top all'   keep the X lowest-pvalue gene sets overall
-%                               among all directionality types, where 
-%                               X = filterThresh
+%                     'pval'      keep gene sets that contain at least one
+%                                 p-value below filterThreshold
 %
-%   filterThresh    Filter threshold to determine which gene sets to show
-%                   in the heatmap.
+%                     'top each'  (DEFAULT) keep the X lowest-pvalue gene
+%                                 sets for each directionality type, where
+%                                 X = filterThreshold
 %
-%              Defaults:  filterMethod   filterThresh
-%                         'none'         (not used)
-%                         'pval'         0.05
-%                         'top each'     10
-%                         'top all'      30
-%                   
-%   colorMax        The -log10(p value) corresponding to the darkest color
-%                   on the heatmap colorbar.
-%                   (Default = maximum -log10 pvalue)
+%                     'top all'   keep the X lowest-pvalue gene sets
+%                                 overall among all directionality types,
+%                                 where X = filterThreshold
 %
-%   dirType         String specifying the type of gene set p-values to use
-%                   in the heatmap.
-%                   
-%                   'nondir'  use non-directional p-values
+%   'filterThreshold' Filter threshold used to determine which gene sets to
+%                     show in the heatmap.
 %
-%                   'dir'     use distinct-directional p-values
+%                     DEFAULTS:  filterMethod   filterThreshold
+%                                'none'         (not used)
+%                                'pval'         0.05
+%                                'top each'     10
+%                                'top all'      30
 %
-%                   'both'    (Default) use both non- and distinct-
-%                             directional p-values (creates 2 figures)
+%   'dirType'         String specifying the directional class of gene set
+%                     p-values to show in the heatmap.
 %
-%                   NOTE: This input is only used when GSAres is a cell
-%                   array of multiple GSA result structures.
+%                     NOTE: If "GSAres" is a single GSA result table, the
+%                           non-directional p-values will ALWAYS be shown.
+%                           If "GSAres" is an array of multiple GSA result
+%                           tables, the "mixed-directional" p-values will
+%                           NOT be shown.
+%                           
+%                     'all'       (DEFAULT) show all directional classes of
+%                                 p-values (non-, mixed-, and distinct-
+%                                 directional).
+%
+%                     'nondir'    show only non-directional p-values.
+%
+%                     'mixed'     show mixed-directional p-values.
+%
+%                     'distinct'  show distinct-directional p-values.
+%
+%   'colorMax'        The -log10(p value) corresponding to the darkest
+%                     color on the heatmap colorbar.
+%                     (DEFAULT = maximum -log10 pvalue)
 %
 %
-% Jonathan Robinson, 2020-01-22
+% Jonathan Robinson, 2020-02-08
 
 
 %% Handle inputs
 
-% assign default inputs
-if nargin < 2 || isempty(adjusted)
-    adjusted = true;
-end
-if nargin < 3 || isempty(filterMethod)
-    filterMethod = 'top each';
-end
-if nargin < 4 || isempty(filterThresh)
-    switch lower(filterMethod)
-        case {'pval','p-val','pvalue','p-value'}
-            filterThresh = 0.05;
-        case 'top each'
-            filterThresh = 10;
-        case 'top all'
-            filterThresh = 30;
-        otherwise
-            filterThresh = [];
-    end
-end
-if nargin < 5
-    colorMax = [];
-end
-if nargin < 6
-    dirType = 'both';
-elseif ismember(dirType,{'dir','distdir','dist-dir','dist.dir','directional'})
-    dirType = 'dir';
-elseif ismember(dirType,{'nondir','non-dir','non.dir','nondirectional','non-directional'})
-    dirType = 'nondir';
+% set defaults
+opt.adjusted = true;
+opt.dirtype = 'all';
+opt.colormax = [];  % will be set based on the data later on
+
+% since the filterThreshold default depends on the filterMethod, we need to
+% already check this in the inputs
+ind = find(strcmpi('filtermethod',varargin));
+if isempty(ind)
+    opt.filtermethod = 'top each';  % default
 else
-    error('dirType not recognized. Must be "nondir", "dir", or "both".');
+    opt.filtermethod = varargin{ind+1};
+end
+
+% assign filterThreshold default based on filterMethod
+switch lower(opt.filtermethod)
+    case {'pval','p-val','pvalue','p-value'}
+        opt.filterthreshold = 0.05;
+    case {'top each','topeach'}
+        opt.filterthreshold = 10;
+    case {'top all','topall'}
+        opt.filterthreshold = 30;
+    case 'none'
+        opt.filterthreshold = [];
+    otherwise
+        error('"%s" is not a recognized filterMethod. Valid options are "none", "pval", "top each", or "top all".', opt.filtermethod);
+end
+
+% overwrite defaults with input settings (if provided)
+opt = modifyOptSettings(opt,varargin);
+
+% verify dirType input
+if contains(opt.dirtype,'mix')
+    if iscell(GSAres)
+        error('The mixed-directional dirType option is not available for multi-GSA results.');
+    end
+    opt.dirtype = 'mix';
+elseif contains(opt.dirtype,'dist')
+    opt.dirtype = 'dist';
+elseif contains(opt.dirtype,'non')
+    opt.dirtype = 'non';
+elseif ~strcmp(opt.dirtype,'all')
+    error('"%s" is not a recognized dirType. Valid options are "all", "nondir", "mixed", or "distinct".', opt.dirtype);
 end
 
 
@@ -101,27 +123,32 @@ end
 
 if istable(GSAres)  % single GSA result table
     
-    % extract p-value data from GSAres
+    % determine which p-value types to plot
     table_cols = {'p_distdn';'p_mixdn';'p_nondir';'p_mixup';'p_distup'};
     colnames = {'dist-down';'mix-down';'non-dir';'mix-up';'dist-up'};
-    if ( adjusted )
+    if ~strcmp(opt.dirtype, 'all')
+        keep_cols = contains(colnames, [{'non'}, opt.dirtype]);  % always show non-directional
+        table_cols = table_cols(keep_cols);
+        colnames = colnames(keep_cols);
+    end
+    if ( opt.adjusted )
         table_cols = regexprep(table_cols,'p_','padj_');
     end
     [keep,col_inds] = ismember(table_cols,GSAres.Properties.VariableNames);
-    col_inds = col_inds(keep);  % in case some p-value types are missing
+    col_inds = col_inds(keep);  % in case some p-value classes are missing
     colnames = colnames(keep);
     pData = table2array(GSAres(:,col_inds));
     
     % set max color value if not specified
-    if isempty(colorMax)
-        colorMax = max(-log10(pData(:)));
+    if isempty(opt.colormax)
+        opt.colormax = max(-log10(pData(:)));
     end
     
     % assign rownames (gene-set names)
     rownames = GSAres.GS_name;
     
     % filter rows from p-value matrix
-    keep_rows = filter_pData(pData,filterMethod,filterThresh);
+    keep_rows = filter_pData(pData, opt.filtermethod, opt.filterthreshold);
     if isempty(keep_rows)
         error('No gene sets passed the filter - try relaxing the constraints.');
     end
@@ -135,10 +162,11 @@ if istable(GSAres)  % single GSA result table
     % dir.score = (p.mix.up*(p.non.dir + p.dist.up) - p.mix.dn*(p.non.dir + p.dist.dn)) / (2*max(p)^2)
     if size(log_pData,2) == 5
         dir_score = (log_pData(:,4).*(log_pData(:,3) + log_pData(:,5)) - log_pData(:,2).*(log_pData(:,3) + log_pData(:,1)))./(2*max(log_pData(:)).^2);
-    elseif all(strcmp(colnames,{'dist-down';'non-dir';'dist-up'})) || ...
-            all(strcmp(colnames,{'mix-down';'non-dir';'mix-up'}))
+    elseif size(log_pData,2) == 3
         % if mix-directional or distinct-directional p-values are missing
-        dir_score = (log_pData(:,3) - log_pData(:,1)).*log_pData(:,2);
+        dir_score = (log_pData(:,3) - log_pData(:,1)).*max(log_pData(:,2), 0.1);
+    else
+        dir_score = log_pData;  % non-directional only
     end
     [~,sort_ind] = sort(dir_score);
     
@@ -164,14 +192,18 @@ elseif iscell(GSAres)  % array of multiple GSA result tables
     [pData_nondir,pData_distdn,pData_distup] = deal(ones(numel(GSnames_intersect),numel(GSAres)));
     for i = 1:numel(GSAres)
         [~,ind] = ismember(GSnames_intersect, GSAres{i}.GS_name);
-        if ~(adjusted)
+        if ~(opt.adjusted)
             pData_nondir(:,i) = GSAres{i}.p_nondir(ind);
-            pData_distdn(:,i) = GSAres{i}.p_distdn(ind);
-            pData_distup(:,i) = GSAres{i}.p_distup(ind);
+            if ismember('p_distdn', GSAres{i}.Properties.VariableNames)
+                pData_distdn(:,i) = GSAres{i}.p_distdn(ind);
+                pData_distup(:,i) = GSAres{i}.p_distup(ind);
+            end
         else
             pData_nondir(:,i) = GSAres{i}.padj_nondir(ind);
-            pData_distdn(:,i) = GSAres{i}.padj_distdn(ind);
-            pData_distup(:,i) = GSAres{i}.padj_distup(ind);
+            if ismember('padj_distdn', GSAres{i}.Properties.VariableNames)
+                pData_distdn(:,i) = GSAres{i}.padj_distdn(ind);
+                pData_distup(:,i) = GSAres{i}.padj_distup(ind);
+            end
         end
     end
     
@@ -184,20 +216,20 @@ elseif iscell(GSAres)  % array of multiple GSA result tables
     log_pData_distdir(pData_distdn < pData_distup) = -log_pData_distdir(pData_distdn < pData_distup);
     
     % set max color value if not specified
-    if isempty(colorMax)
-        colorMax = max([log_pData_nondir(:); abs(log_pData_distdir(:))]);
+    if isempty(opt.colormax)
+        opt.colormax = max([log_pData_nondir(:); abs(log_pData_distdir(:))]);
     end
     
     % assign rownames (gene-set names)
     rownames = GSnames_intersect;
     
     % filter rows from non-directional p-value matrix
-    if ~strcmp(dirType,'dir')
-        keep_rows = filter_pData(pData_nondir,filterMethod,filterThresh);
+    if ~strcmp(opt.dirtype,'dist')
+        keep_rows = filter_pData(pData_nondir, opt.filtermethod, opt.filterthreshold);
         if isempty(keep_rows)
-            if strcmp(dirType,'both')
+            if strcmp(opt.dirtype,'all')
                 warning('No gene sets passed the filter on non-directional p-values - plot will not be shown!');
-            elseif strcmp(dirType,'nondir')
+            elseif strcmp(opt.dirtype,'non')
                 error('No gene sets passed the filter on non-directional p-values - try relaxing the constraints.');
             end
         end
@@ -208,12 +240,12 @@ elseif iscell(GSAres)  % array of multiple GSA result tables
     rownames_nondir = rownames(keep_rows);
     
     % filter rows from distinct-directional p-value matrix
-    if ~strcmp(dirType,'nondir')
-        keep_rows = filter_pData(pData_distdir,filterMethod,filterThresh);
+    if ~strcmp(opt.dirtype,'non')
+        keep_rows = filter_pData(pData_distdir, opt.filtermethod, opt.filterthreshold);
         if isempty(keep_rows)
-            if strcmp(dirType,'both')
+            if strcmp(opt.dirtype,'all')
                 warning('No gene sets passed the filter on distinct-directional p-values - plot will not be shown!');
-            elseif strcmp(dirType,'nondir')
+            elseif strcmp(opt.dirtype,'dist')
                 error('No gene sets passed the filter on distinct-directional p-values - try relaxing the constraints.');
             end
         end
@@ -224,7 +256,7 @@ elseif iscell(GSAres)  % array of multiple GSA result tables
     rownames_distdir = rownames(keep_rows);
     
 else
-    error('GSAres is in an unrecognized format. Should be a table, or a cell array of tables.');
+    error('GSAres is in an unrecognized format. It should be a table, or a cell array of tables.');
 end
 
 
@@ -239,24 +271,31 @@ if istable(GSAres)
     cmap_up = hotcmap(1:100,:);
     
     % Columns will be colored according to their directionality.
-    % Columns 1 and 2 (p dist.dir.dn and mix.dir.dn) are colored according
-    % to the first colormap in CMAP, column 3 (p non.dir) is colored
-    % according to the second colormap in CMAP, and columns 4 and 5
-    % (p mix.dir.up and dist.dir.up) are colored according to the third
-    % color in CMAP.
+    % Distinct- and mixed-directional-down are colored according to the
+    % first colormap in CMAP, non-directional is colored according to the
+    % second colormap in CMAP, and distinct- and mixed-directional-up are
+    % are colored according to the third color in CMAP.
     cmap = [cmap_down; cmap_nondir; cmap_up];
     if length(colnames) == 5
-        log_pData(:,1:2) = min(log_pData(:,1:2),0.999999*colorMax);
-        log_pData(:,3)   = min(log_pData(:,3) + 1.000001*colorMax,1.999999*colorMax);
-        log_pData(:,4:5) = min(log_pData(:,4:5) + 2.000001*colorMax,2.999999*colorMax);
+        log_pData(:,1:2) = min(log_pData(:,1:2), 0.999999*opt.colormax);
+        log_pData(:,3)   = min(log_pData(:,3)   + 1.000001*opt.colormax, 1.999999*opt.colormax);
+        log_pData(:,4:5) = min(log_pData(:,4:5) + 2.000001*opt.colormax, 2.999999*opt.colormax);
+        colorBounds = [0, 3 * opt.colormax];
     elseif length(colnames) == 3
-        log_pData(:,1) = min(log_pData(:,1),0.999999*colorMax);
-        log_pData(:,2) = min(log_pData(:,2) + 1.000001*colorMax,1.999999*colorMax);
-        log_pData(:,3) = min(log_pData(:,3) + 2.000001*colorMax,2.999999*colorMax);
+        log_pData(:,1) = min(log_pData(:,1), 0.999999*opt.colormax);
+        log_pData(:,2) = min(log_pData(:,2) + 1.000001*opt.colormax, 1.999999*opt.colormax);
+        log_pData(:,3) = min(log_pData(:,3) + 2.000001*opt.colormax, 2.999999*opt.colormax);
+        colorBounds = [0, 3 * opt.colormax];
+    elseif length(colnames) == 1
+        % use a different heatmap if only non-directional will be shown,
+        % otherwise it is pretty boring
+        cmap = custom_cmap('whitemagma',100);
+        log_pData = min(log_pData, opt.colormax);
+        colorBounds = [0, opt.colormax];
     else
-        error('Incorrect number of columns.');
+        error('Incorrect number of columns.');  % should never see this error
     end
-    colorBounds = [0,3*colorMax];
+    
     
     % trim very long gene set names
     maxChar = 75;
@@ -275,29 +314,39 @@ if istable(GSAres)
     set(gca,'Position',pos .* [1 1 scaleX 1]);
     
     % add custom colorbars
-    % reduce figure height to make room for the colorbars
-    scaleY = min(0.85, 0.75 + size(log_pData,1)*0.002);
-    plotPos = get(gca,'Position') .* [1 1 1 scaleY];
-    set(gca,'Position', plotPos);
-    
-    % determine the position of the colorbars based on the plot position
-    cbar_width = max(0.02, 0.04 - size(log_pData,1)*0.001);  % scale width based on number of rows
-    c1Pos = [plotPos(1), plotPos(2)+plotPos(4)+0.02, plotPos(3), cbar_width];
-    c2Pos = [plotPos(1), plotPos(2)+plotPos(4)+0.02+1.5*cbar_width, plotPos(3), cbar_width];
-    c3Pos = [plotPos(1), plotPos(2)+plotPos(4)+0.02+3.0*cbar_width, plotPos(3), cbar_width];
-    
-    % add colorbars on top of plot
-    c1 = colorbar('Location','NorthOutside','Position',c1Pos,'TickLabels',[],'Limits',[0 colorMax]);
-    c2 = colorbar('Location','NorthOutside','Position',c2Pos,'TickLabels',[],'Limits',[0 colorMax]);
-    c3 = colorbar('Location','NorthOutside','Position',c3Pos,'FontSize',10,'Limits',[0 colorMax]);
-    
-    % label colorbar axis
-    xlabel(c3,'-log_1_0(p-value)','FontSize',10);
-    
-    % map each colorbar to a different p-value direction type
-    colormap(c1,repmat(cmap_down,3,1));
-    colormap(c2,repmat(cmap_nondir,3,1));
-    colormap(c3,repmat(cmap_up,3,1));
+    if length(colnames) == 1  % non-directional only
+
+        % add colorbar
+        c = colorbar('Location','NorthOutside');
+        xlabel(c,'log_1_0(p.non.dir)','FontSize',10);
+                
+    else
+        
+        % reduce figure height to make room for the colorbars
+        scaleY = min(0.85, 0.75 + size(log_pData,1)*0.002);
+        plotPos = get(gca,'Position') .* [1 1 1 scaleY];
+        set(gca,'Position', plotPos);
+        
+        % determine the position of the colorbars based on the plot position
+        cbar_width = max(0.02, 0.04 - size(log_pData,1)*0.001);  % scale width based on number of rows
+        c1Pos = [plotPos(1), plotPos(2)+plotPos(4)+0.02, plotPos(3), cbar_width];
+        c2Pos = [plotPos(1), plotPos(2)+plotPos(4)+0.02+1.5*cbar_width, plotPos(3), cbar_width];
+        c3Pos = [plotPos(1), plotPos(2)+plotPos(4)+0.02+3.0*cbar_width, plotPos(3), cbar_width];
+        
+        % add colorbars on top of plot
+        c1 = colorbar('Location','NorthOutside','Position',c1Pos,'TickLabels',[],'Limits',[0 opt.colormax]);
+        c2 = colorbar('Location','NorthOutside','Position',c2Pos,'TickLabels',[],'Limits',[0 opt.colormax]);
+        c3 = colorbar('Location','NorthOutside','Position',c3Pos,'FontSize',10,'Limits',[0 opt.colormax]);
+        
+        % label colorbar axis
+        xlabel(c3,'-log_1_0(p-value)','FontSize',10);
+        
+        % map each colorbar to a different p-value direction type
+        colormap(c1,repmat(cmap_down,3,1));
+        colormap(c2,repmat(cmap_nondir,3,1));
+        colormap(c3,repmat(cmap_up,3,1));
+        
+    end
     
 elseif iscell(GSAres)
     
@@ -309,7 +358,7 @@ elseif iscell(GSAres)
     end
 
     % plot non-directional p-value heatmap
-    if ismember(dirType,{'nondir','both'}) && ~isempty(log_pData_nondir)
+    if ismember(opt.dirtype,{'non','all'}) && ~isempty(log_pData_nondir)
         % trim very long gene set names
         maxChar = 75;
         longNames = cellfun(@(s) length(s) > maxChar, rownames_nondir);
@@ -318,7 +367,7 @@ elseif iscell(GSAres)
         % generate heatmap
         genHeatMap(log_pData_nondir, 'colNames', colnames, 'rowNames', ...
             rownames_nondir, 'clusterDim', 'both', 'clusterDist', 'euclid', ...
-            'colorMap', custom_cmap('magma'), 'colorBounds', [0,colorMax], ...
+            'colorMap', custom_cmap('whitemagma'), 'colorBounds', [0,opt.colormax], ...
             'gridColor','k');
         
         % scale plot horizontally to deal with too long or short gene set names
@@ -333,7 +382,7 @@ elseif iscell(GSAres)
     end
     
      % plot distinct-directional p-value heatmap
-    if ismember(dirType,{'dir','both'}) && ~isempty(log_pData_distdir)
+    if ismember(opt.dirtype,{'dist','all'}) && ~isempty(log_pData_distdir)
         % trim very long gene set names
         maxChar = 75;
         longNames = cellfun(@(s) length(s) > maxChar, rownames_distdir);
@@ -342,7 +391,7 @@ elseif iscell(GSAres)
         % generate heatmap
         genHeatMap(log_pData_distdir, 'colNames', colnames, 'rowNames', ...
             rownames_distdir, 'clusterDim', 'both', 'clusterDist', 'euclid', ...
-            'colorMap', custom_cmap('redblue'), 'colorBounds', [-colorMax,colorMax], ...
+            'colorMap', custom_cmap('redblue'), 'colorBounds', [-opt.colormax,opt.colormax], ...
             'gridColor','k');
         
         % scale plot horizontally to deal with too long or short gene set names
@@ -386,21 +435,21 @@ end
 end
 
 
-function keep_rows = filter_pData(pData,filterMethod,filterThresh)
+function keep_rows = filter_pData(pData,filterMethod,filterThreshold)
 % Determine which rows of a p-value matrix to keep based on filter criteria
 
 switch filterMethod
     case 'pval'
         % keep rows that contain at least one entry below threshold p-val
-        keep_rows = find(any(pData < filterThresh,2));
+        keep_rows = find(any(pData < filterThreshold,2));
     case 'top each'
-        % keep the X lowest-pvalue-rows of each column, where X = filterThresh
+        % keep the X lowest-pvalue-rows of each column, where X = filterThreshold
         [~,sort_ind] = sort(pData);
-        keep_rows = unique(sort_ind(1:filterThresh,:));
+        keep_rows = unique(sort_ind(1:filterThreshold,:));
     case 'top all'
-        % keep the X lowest-pvalue-rows overall, where X = filterThresh
+        % keep the X lowest-pvalue-rows overall, where X = filterThreshold
         [~,sort_ind] = sort(min(pData,[],2));
-        keep_rows = sort_ind(1:filterThresh);
+        keep_rows = sort_ind(1:filterThreshold);
     case 'none'
         % keep all rows
         keep_rows = 1:size(pData,1);
