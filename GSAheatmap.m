@@ -87,6 +87,9 @@ else
     opt.filtermethod = varargin{ind+1};
 end
 
+% allow abbreviation of "filterThresh"
+varargin(strcmpi('filterthresh',varargin)) = {'filterthreshold'};
+
 % assign filterThreshold default based on filterMethod
 switch lower(opt.filtermethod)
     case {'pval','p-val','pvalue','p-value'}
