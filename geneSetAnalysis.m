@@ -1,22 +1,20 @@
-function [GSAres,GSCproc] = geneSetAnalysis(...
-    genes,pvals,dirs,gsc,method,nperms,GS_size_bounds,stat_type,data_names)
+function [GSAres,GSCproc] = geneSetAnalysis(genes,pvals,dirs,gsc,varargin)
 %geneSetAnalysis  Perform a gene set analysis (GSA).
 %
 % Performs a GSA given gene-level statistics (PVALS) and directionality
-% (DIRS) for each gene, using gene sets defined by the GSC and the
-% specified method of calculating the test-statistic. geneSetAnalysis
-% returns the calculated gene set sizes and p-values in GSAres, as well as
-% the processed list of gene sets (GSCproc) if requested.
+% (DIRS) for each gene, using gene sets defined by the gene set collection
+% (GSC) and a specified method of calculating the test-statistic.
+% geneSetAnalysis returns the calculated gene set sizes and p-values in
+% GSAres, as well as the processed GSC (GSCproc).
 %
 % If multiple datasets are provided (i.e., more than one set of PVALS), the
-% function will run a GSA on each set separately, and the results will be
-% returned as an array of tables.
+% function will run a GSA on each set separately, and the results (GSAres)
+% will be returned as an array of tables.
 %
 %
 % Usage:
 %
-%   [GSAres,GSCproc] = geneSetAnalysis( ...
-%       genes,pvals,dirs,gsc,method,nperms,GS_size_bounds,stat_type,data_names);
+%   [GSAres, GSCproc] = geneSetAnalysis(genes, pvals, dirs, gsc, ...);
 %
 %
 % Input:
@@ -27,7 +25,7 @@ function [GSAres,GSCproc] = geneSetAnalysis(...
 %               collection (GSC) input (see below).
 %               If PVALS is a cell array of vectors, GENES should contain
 %               a list of gene names or identifiers corresponding to each
-%               entry in PVALS.
+%               vector in PVALS.
 %
 %   pvals       A vector of gene-level statistics (e.g., p-values)
 %               corresponding to GENES. To analyze more than one set of
@@ -37,19 +35,19 @@ function [GSAres,GSCproc] = geneSetAnalysis(...
 %               If PVALS is a cell array of vectors, GENES should contain
 %               an array of gene names or identifiers corresponding to each
 %               vector of PVALS.
-%               If the statistics are not p-like, it should be specified in
-%               the STAT_TYPE input (see below).
+%               If the gene-level statistics are not p-like, it should be
+%               specified in the 'geneStatType' option (see below).
 %
 %   dirs        Column vector of directions associated with each gene:
 %               (up = 1, down = -1, no change = 0). 
-%               Continuous data (such as fold-change values) will be
-%               converted to ternary (+1,-1,0) values.
-%               If PVALS is a matrix or array of vectors, then DIRS should
-%               also be a matrix or array of vectors, respectively.
+%               Continuous data (such as fold-change values) will
+%               automatically be converted to ternary (+1,-1,0) values.
+%               If PVALS is a matrix or cell array of vectors, then DIRS
+%               should also be a matrix or array of vectors, respectively.
 %               Leave blank (dirs = []) if DIRS are not available.
 %               
-%               *** NOTE: if PVALS are signed, this input will be ingored
-%                   and DIRS set equal to sign(PVALS).
+%               *** NOTE: if PVALS are signed, the DIRS input will be
+%                   ignored and DIRS will be set equal to sign(PVALS).
 %
 %   gsc         A gene set collection. An Nx2 cell array of gene set
 %               information, where the first column contains the gene set
@@ -71,99 +69,112 @@ function [GSAres,GSCproc] = geneSetAnalysis(...
 %               long as they are consistent with the naming used in the
 %               GENES input.
 %
-%   method      Satistical method used to combine gene-level statistics:
+%
+% Additional Settings:
+%
+%   'method'     Satistical method used to combine gene-level statistics
+%                to obtain gene set statistics.
 %
 %                   'fisher'    Fisher's method
 %                 'reporter'    Reporter method
 %                 'stouffer'    Stouffer's method
-%                 'wilcoxon'    Wilcoxon rank-sum test (DEFAULT)
+%                 'wilcoxon'    (DEFAULT) Wilcoxon rank-sum test
 %                     'mean'    Mean (arithmetic) value
 %                  'geomean'    Mean (geometric) value
 %                   'median'    Median value
-%                     'GSEA'    Gene Set Enrichment Analysis (not complete)
+%                     'GSEA'    Gene Set Enrichment Analysis (NOT COMPLETE)
 %
-%   nperms      Number of permutations to perform when calculating the 
-%               significance of each gene set. (DEFAULT = 10,000)
+%   'nPerm'      Number of permutations to perform when calculating the 
+%                significance of each gene set using gene label shuffling.
+%                (DEFAULT = 10,000)
+%
+%                'nPerm' can also be set to 'nullDist', where the
+%                significance of gene sets will be calculated on the
+%                theoretical null distribution of the statistical method
+%                instead of a non-parametric permutation of gene labels.
+%                The 'nullDist' option is only available for the following
+%                methods: 'fisher', 'stouffer'.
 % 
-%   GS_size_bounds  The min and max size allowed for a gene set to be
-%                   included in the analysis. (DEFAULT = [5,Inf]) 
+%   'gsSizeLim'  The min and max size allowed for a gene set to be
+%                included in the analysis.
+%                (DEFAULT = [5, 1000])
 %
-%   stat_type   The type of gene-level statistic provided in PVALS:
+%   'geneStatType'  The type of gene-level statistic provided in PVALS:
 %
-%                   'p'     (DEFAULT) p-values ranging between 0 and 1,
+%                     'p'   (DEFAULT) p-values ranging between 0 and 1,
 %                           where a lower value indicates a greater score
 %                           or "significance".
 %
-%               'other'     Some other non-p-like gene-level statistic.
+%                 'other'   Some other non-p-like gene-level statistic.
 %                           Numbers with a greater value will be considered
 %                           to indicate a greater score or "significance".
 %
-%   data_names  A cell array of names corresponding to the columns or
-%               entries of PVALS (if PVALS is a matrix or cell array of
-%               vectors) that will be used to label each of the table(s)
-%               comprising the GSAres array (the "Properties.Description"
-%               field of the table). If PVALS is a vector, DATA_NAMES can
-%               be omitted or provided as a string. If PVALS is a matrix or
-%               a cell array of vectors and DATA_NAMES are not provided,
-%               the default names will be 'Data1', 'Data2', etc.
+%   'dataNames'  A cell array of names corresponding to the columns or
+%                entries of PVALS (if PVALS is a matrix or cell array of
+%                vectors, respectively) that will be used to label each of
+%                the result table(s) comprising the GSAres array (using the
+%                "Properties.Description" field of the table). 
+%                If PVALS is a vector, 'dataNames' can be provided as a
+%                string.
+%                If PVALS is a matrix or a cell array of vectors and
+%                'dataNames' are not provided, the default names will be
+%                'Data1', 'Data2', etc.
 %
 %
 % Output:
 %
 %   GSAres      A table containing the GSA results, including gene set
 %               names and sizes, and their associated p-values (raw and
-%               adjusted) for each of the relevant directionality classes.
+%               adjusted) for each of the available directionality classes.
 %               If PVALS is a matrix or cell array of vectors, GSAres will
 %               be returned as a cell array of tables.
 %
-%   GSCproc     The processed gene set collection (GSC) cell array that is
+%   GSCproc     The processed gene set collection (GSC) cell array that was
 %               used in the gene set analysis. This is the resulting GSC
 %               after the input GSC is processed to remove dulicate
-%               entries, gene sets that do not satisfy the GS_SIZE_BOUNDS,
-%               and removing genes that are not present in the GENES input.
+%               entries, gene sets that do not satisfy the 'gsSizeLims',
+%               and genes that are not present in the GENES input.
 %               If PVALS is a matrix or cell array of vectors, GSCproc will
 %               be returned as a cell array of arrays.
 %
 %
-% Jonathan Robinson, 2020-01-28
+% Jonathan Robinson, 2020-02-09
 
 
 %% Handle input arguments
 
-if strcmpi(method,'GSEA')
+% set defaults
+opt.method = 'wilcoxon';
+opt.nperm = 10000;
+opt.gssizelim = [5, 1000];
+opt.genestattype = 'p';
+opt.datanames = [];  % default will later be set as 'Data1', 'Data2', ... 
+
+% overwrite defaults with input settings (if provided)
+opt = modifyOptSettings(opt,varargin);
+
+% further verify some inputs
+if strcmpi(opt.method,'GSEA')
     % still need to code the significance calculation portion of GSEA
     error('The GSEA method is not yet available.');
-end
-
-if nargin < 6 || isempty(nperms)
-    nperms = 10000;
-end
-if nargin < 7 || isempty(GS_size_bounds)
-    GS_size_bounds = [5,Inf];
-end
-if nargin < 8 || isempty(stat_type)
-    stat_type = 'p';
-end
-if nargin < 9
-    data_names = [];
 end
 
 if ~isempty(dirs) && ~all(size(dirs) == size(pvals))
     error('PVALS and DIRS must have the same dimensions.');
 end
 
-if ~ismember(stat_type,{'p','other'})
-    error('Invalid STAT_TYPE. Valid options are "p" or "other".');
+if ~ismember(opt.genestattype,{'p','other'})
+    error('Invalid "geneStatType". Valid options are "p" or "other".');
 end
 
-if length(GS_size_bounds) == 1
-    % if only one value is provided for GS_size_bounds, assume it is the minimum set size allowed
-    GS_size_bounds(2) = Inf;
+if length(opt.gssizelim) == 1
+    % if only one value is provided for 'gsSizeLim', assume it is the minimum set size allowed
+    opt.gssizelim(2) = Inf;
 end
-[minGSsize,maxGSsize] = deal(GS_size_bounds(1),GS_size_bounds(2));
+[minGSsize,maxGSsize] = deal(opt.gssizelim(1),opt.gssizelim(2));
 
-if ismember(lower(method),{'fisher','reporter','stouffer'}) && ~strcmpi(stat_type,'p')
-    error('Fisher, Reporter, and Stouffer methods are only valid for p-like statistics (STAT_TYPE = "P").');
+if ismember(lower(opt.method),{'fisher','reporter','stouffer'}) && ~strcmpi(opt.genestattype,'p')
+    error('Fisher, Reporter, and Stouffer methods are only valid for p-like statistics ("geneStatType" = "p").');
 end
 
 % if PVALS is a matrix or cell array, run each column or entry separately
@@ -184,19 +195,21 @@ if min(size(pvals)) > 1 || iscell(pvals)
         Ndata = numel(pvals);
     end
     
-    % assign DATA_NAMES if missing
-    if isempty(data_names)
-        data_names = strcat('Data', arrayfun(@num2str,(1:Ndata)','UniformOutput',false));
-    elseif numel(data_names) < Ndata
-        error('Number of entries in DATA_NAMES must match the number of columns or entries in PVALS');
+    % assign 'dataNames' if missing
+    if isempty(opt.datanames)
+        opt.datanames = strcat('Data', arrayfun(@num2str,(1:Ndata)','UniformOutput',false));
+    elseif numel(opt.datanames) < Ndata
+        error('Number of entries in "dataNames" must match the number of columns or entries in PVALS');
     end
     
     % call geneSetAnalysis function recursively
-    [GSAres,GSCproc] = deal(cell(Ndata,1));
+    [GSAres, GSCproc] = deal(cell(Ndata,1));
     for i = 1:Ndata
-        fprintf('\n\n##### Running GSA on %s (run %u of %u) #####\n\n',data_names{i},i,Ndata);
-        [GSAres{i},GSCproc{i}] = geneSetAnalysis(...
-            genes{i},pvals{i},dirs{i},gsc,method,nperms,GS_size_bounds,stat_type,data_names{i});
+        fprintf('\n\n##### Running GSA on %s (run %u of %u) #####\n\n',opt.datanames{i},i,Ndata);
+        [GSAres{i}, GSCproc{i}] = geneSetAnalysis(...
+            genes{i}, pvals{i}, dirs{i}, gsc, 'method', opt.method, ...
+            'nPerm', opt.nperm, 'gsSizeLim', opt.gssizelim, ...
+            'geneStatType', opt.genestattype, 'dataNames', opt.datanames{i});
     end
     
     % return results and exit function
@@ -218,7 +231,7 @@ if any(pvals < 0)
 end
 
 % deal with problematic p-values
-if strcmpi(stat_type,'p')
+if strcmpi(opt.genestattype,'p')
     % handle p-values equal to 0 or 1
     ind = (pvals == 0);
     if sum(ind) > 0
@@ -347,7 +360,7 @@ end
 [pvals_distup,pvals_distdn] = deal(pvals);
 
 fprintf('Calculating test statistic... ');
-switch lower(method)
+switch lower(opt.method)
     
     case 'fisher'
         % Fisher method test statistic: -2*sum(log(p))
@@ -377,7 +390,7 @@ switch lower(method)
         
         if ~isempty(dirs)
             
-            if strcmpi(stat_type,'p')
+            if strcmpi(opt.genestattype,'p')
                 % convert p-values into rank numbers
                 
                 %  *Distinct directional ranks are generated in the complicated
@@ -392,7 +405,7 @@ switch lower(method)
                 pvals_mixup = tiedrank(-pvals_mixup);
                 pvals_mixdn = tiedrank(-pvals_mixdn);
                 
-            elseif strcmpi(stat_type,'other')
+            elseif strcmpi(opt.genestattype,'other')
                 
                 % convert gene-level statistics to ranks
                 pvals_distup = tiedrank(pvals.*dirs);
@@ -413,9 +426,9 @@ switch lower(method)
         end
         
         % rank non-directional test statistics
-        if strcmpi(stat_type,'p')
+        if strcmpi(opt.genestattype,'p')
             pvals = tiedrank(-pvals);
-        elseif strcmpi(stat_type,'other')
+        elseif strcmpi(opt.genestattype,'other')
             pvals = tiedrank(pvals);
         end
         
@@ -426,7 +439,7 @@ switch lower(method)
         
         if ~isempty(dirs)
             
-            if strcmpi(stat_type,'p')
+            if strcmpi(opt.genestattype,'p')
                 
                 pvals_mixup = -pvals_mixup;
                 pvals_mixdn = -pvals_mixdn;
@@ -442,7 +455,7 @@ switch lower(method)
                 pvals_distup = (1 - pvals).*dirs;
                 pvals_distdn = (pvals - 1).*dirs;
                 
-            elseif strcmpi(stat_type,'other')
+            elseif strcmpi(opt.genestattype,'other')
                 
                 pvals_distup = pvals.*dirs;
                 pvals_distdn = -pvals.*dirs;
@@ -458,7 +471,7 @@ switch lower(method)
             
         end
         
-        if strcmpi(stat_type,'p')
+        if strcmpi(opt.genestattype,'p')
             pvals = -pvals;
         end
         
@@ -488,24 +501,24 @@ switch lower(method)
         
 
     otherwise
-        error('Invalid METHOD requested.');
+        error('Invalid "method" requested.');
 end
 fprintf('Done.\n');
 
 
 %% Calculate significance
 
-if isnumeric(nperms)
+if isnumeric(opt.nperm)
     
     % randomly shuffle p-values and assemble into matrix
     fprintf('Calculating significance via gene shuffling... ');
     rng('shuffle');  % re-seed random number generator
     
     maxVal = max(GSsizes);
-    indmat = arrayfun(@(x,mv) randperm(x,mv),ones(1,nperms)*length(genes),repmat(maxVal,1,nperms),'UniformOutput',false);
-    indmat = reshape([indmat{:}],maxVal,nperms);
+    indmat = arrayfun(@(x,mv) randperm(x,mv),ones(1,opt.nperm)*length(genes),repmat(maxVal,1,opt.nperm),'UniformOutput',false);
+    indmat = reshape([indmat{:}],maxVal,opt.nperm);
     
-    if strcmpi(method,'gsea')
+    if strcmpi(opt.method,'gsea')
         p_permute = indmat;  % only need indices for GSEA approach
     else
         p_permute = pvals(indmat);
@@ -521,13 +534,13 @@ if isnumeric(nperms)
         dir_permute = dirs(indmat);
         
         maxVal_mixup = max(GSsizes_mixup);
-        indmat_mixup = arrayfun(@(x,mv) randperm(x,mv),ones(1,nperms)*length(genes_mixup),repmat(maxVal_mixup,1,nperms),'UniformOutput',false);
-        indmat_mixup = reshape([indmat_mixup{:}],maxVal_mixup,nperms);
+        indmat_mixup = arrayfun(@(x,mv) randperm(x,mv),ones(1,opt.nperm)*length(genes_mixup),repmat(maxVal_mixup,1,opt.nperm),'UniformOutput',false);
+        indmat_mixup = reshape([indmat_mixup{:}],maxVal_mixup,opt.nperm);
         p_permute_mixup = pvals_mixup(indmat_mixup);
         
         maxVal_mixdn = max(GSsizes_mixdn);
-        indmat_mixdn = arrayfun(@(x,mv) randperm(x,mv),ones(1,nperms)*length(genes_mixdn),repmat(maxVal_mixdn,1,nperms),'UniformOutput',false);
-        indmat_mixdn = reshape([indmat_mixdn{:}],maxVal_mixdn,nperms);
+        indmat_mixdn = arrayfun(@(x,mv) randperm(x,mv),ones(1,opt.nperm)*length(genes_mixdn),repmat(maxVal_mixdn,1,opt.nperm),'UniformOutput',false);
+        indmat_mixdn = reshape([indmat_mixdn{:}],maxVal_mixdn,opt.nperm);
         p_permute_mixdn = pvals_mixdn(indmat_mixdn);
         
         uniq_sizes_mixup = unique(GSsizes_mixup);
@@ -536,7 +549,7 @@ if isnumeric(nperms)
     
     
     % determine background distribution (test statistics for shuffled PVALS)
-    switch lower(method)
+    switch lower(opt.method)
         case 'fisher'
             
             bg_stat_nondir = arrayfun(@(s) fisher(p_permute(1:s,:)),uniq_sizes,'UniformOutput',false);
@@ -557,7 +570,7 @@ if isnumeric(nperms)
                 bg_stat_mixdn = arrayfun(@(s) stouffer(p_permute_mixdn(1:s,:)),uniq_sizes_mixdn,'UniformOutput',false);
                 
                 bg_stat_distup = arrayfun(@(s) stouffer_dir(p_permute(1:s,:),dir_permute(1:s,:)),uniq_sizes,'UniformOutput',false);
-                bg_stat_distup = reshape([bg_stat_distup{:}],nperms,length(uniq_sizes))';
+                bg_stat_distup = reshape([bg_stat_distup{:}],opt.nperm,length(uniq_sizes))';
                 
                 bg_stat_distdn = -bg_stat_distup;
             end
@@ -572,10 +585,10 @@ if isnumeric(nperms)
                 bg_stat_mixdn = arrayfun(@(s) sum(p_permute_mixdn(1:s,:),1),uniq_sizes_mixdn,'UniformOutput',false);
                 
                 bg_stat_distup = arrayfun(@(s) sum(p_permute_distup(1:s,:),1),uniq_sizes,'UniformOutput',false);
-                bg_stat_distup = reshape([bg_stat_distup{:}],nperms,length(uniq_sizes))';
+                bg_stat_distup = reshape([bg_stat_distup{:}],opt.nperm,length(uniq_sizes))';
                 
                 bg_stat_distdn = arrayfun(@(s) sum(p_permute_distdn(1:s,:),1),uniq_sizes,'UniformOutput',false);
-                bg_stat_distdn = reshape([bg_stat_distdn{:}],nperms,length(uniq_sizes))';
+                bg_stat_distdn = reshape([bg_stat_distdn{:}],opt.nperm,length(uniq_sizes))';
             end
             
         case 'mean'
@@ -587,56 +600,56 @@ if isnumeric(nperms)
                 bg_stat_mixdn = arrayfun(@(s) mean(p_permute_mixdn(1:s,:),1),uniq_sizes_mixdn,'UniformOutput',false);
                 
                 bg_stat_distup = arrayfun(@(s) mean(p_permute_distup(1:s,:),1),uniq_sizes,'UniformOutput',false);
-                bg_stat_distup = reshape([bg_stat_distup{:}],nperms,length(uniq_sizes))';
+                bg_stat_distup = reshape([bg_stat_distup{:}],opt.nperm,length(uniq_sizes))';
                 
                 bg_stat_distdn = arrayfun(@(s) mean(p_permute_distdn(1:s,:),1),uniq_sizes,'UniformOutput',false);
-                bg_stat_distdn = reshape([bg_stat_distdn{:}],nperms,length(uniq_sizes))';
+                bg_stat_distdn = reshape([bg_stat_distdn{:}],opt.nperm,length(uniq_sizes))';
             end
             
         case 'gsea'
             
-            pvals_rep = repmat(pvals_distup,1,nperms);
+            pvals_rep = repmat(pvals_distup,1,opt.nperm);
             bg_stat_distup = arrayfun(@(s) gsea_multi(pvals_rep,ismember(p_permute,1:s)),uniq_sizes,'UniformOutput',false);
-            bg_stat_distup = reshape([bg_stat_distup{:}],nperms,length(uniq_sizes))';
+            bg_stat_distup = reshape([bg_stat_distup{:}],opt.nperm,length(uniq_sizes))';
             
             bg_stat_distdn = -bg_stat_distup;
             
             % NOTE: non-directional and mixed-directional classes are not available for GSEA
-            bg_stat_nondir = {zeros(nperms,length(uniq_sizes))};  % zeros as placeholder
-            bg_stat_mixup = {zeros(nperms,length(uniq_sizes_mixup))};  % zeros as placeholder
-            bg_stat_mixdn = {zeros(nperms,length(uniq_sizes_mixdn))};  % zeros as placeholder
+            bg_stat_nondir = {zeros(opt.nperm,length(uniq_sizes))};  % zeros as placeholder
+            bg_stat_mixup = {zeros(opt.nperm,length(uniq_sizes_mixup))};  % zeros as placeholder
+            bg_stat_mixdn = {zeros(opt.nperm,length(uniq_sizes_mixdn))};  % zeros as placeholder
             
     end
     
     % reshape background distribution test statistic matrices
-    bg_stat_nondir = reshape([bg_stat_nondir{:}],nperms,length(uniq_sizes))';
+    bg_stat_nondir = reshape([bg_stat_nondir{:}],opt.nperm,length(uniq_sizes))';
     if ~isempty(dirs)
-        bg_stat_mixup = reshape([bg_stat_mixup{:}],nperms,length(uniq_sizes_mixup))';
-        bg_stat_mixdn = reshape([bg_stat_mixdn{:}],nperms,length(uniq_sizes_mixdn))';
+        bg_stat_mixup = reshape([bg_stat_mixup{:}],opt.nperm,length(uniq_sizes_mixup))';
+        bg_stat_mixdn = reshape([bg_stat_mixdn{:}],opt.nperm,length(uniq_sizes_mixdn))';
     end
     
     
     % calculate significance of test statistics and adjust p-values for FDR
     % Note: this needs to be performed differently for GSEA (INCOMPLETE)
-    GS_pval_nondir = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_nondir(ismember(uniq_sizes,set_size),:) >= set_stat))/(nperms + 1),statvals_nondir,GSsizes);
+    GS_pval_nondir = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_nondir(ismember(uniq_sizes,set_size),:) >= set_stat))/(opt.nperm + 1),statvals_nondir,GSsizes);
     GS_padj_nondir = adjust_pvalues(GS_pval_nondir,'benjamini',1);
     if ~isempty(dirs)
-        GS_pval_mixup = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_mixup(ismember(uniq_sizes_mixup,set_size),:) >= set_stat))/(nperms + 1),statvals_mixup,GSsizes_mixup);
-        GS_pval_mixdn = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_mixdn(ismember(uniq_sizes_mixdn,set_size),:) >= set_stat))/(nperms + 1),statvals_mixdn,GSsizes_mixdn);
+        GS_pval_mixup = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_mixup(ismember(uniq_sizes_mixup,set_size),:) >= set_stat))/(opt.nperm + 1),statvals_mixup,GSsizes_mixup);
+        GS_pval_mixdn = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_mixdn(ismember(uniq_sizes_mixdn,set_size),:) >= set_stat))/(opt.nperm + 1),statvals_mixdn,GSsizes_mixdn);
         
         GS_padj_mixup = adjust_pvalues(GS_pval_mixup,'benjamini',1);
         GS_padj_mixdn = adjust_pvalues(GS_pval_mixdn,'benjamini',1);
     end
     
-    if ismember(lower(method),{'stouffer','wilcoxon','mean','median','gsea'}) && ~isempty(dirs)
-        GS_pval_distup = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_distup(ismember(uniq_sizes,set_size),:) >= set_stat))/(nperms + 1),statvals_distup,GSsizes);
-        GS_pval_distdn = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_distdn(ismember(uniq_sizes,set_size),:) >= set_stat))/(nperms + 1),statvals_distdn,GSsizes);
+    if ismember(lower(opt.method),{'stouffer','wilcoxon','mean','median','gsea'}) && ~isempty(dirs)
+        GS_pval_distup = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_distup(ismember(uniq_sizes,set_size),:) >= set_stat))/(opt.nperm + 1),statvals_distup,GSsizes);
+        GS_pval_distdn = arrayfun(@(set_stat,set_size) (1 + sum(bg_stat_distdn(ismember(uniq_sizes,set_size),:) >= set_stat))/(opt.nperm + 1),statvals_distdn,GSsizes);
         
         GS_padj_distup = adjust_pvalues(GS_pval_distup,'benjamini',1);
         GS_padj_distdn = adjust_pvalues(GS_pval_distdn,'benjamini',1);
     end
     
-    if strcmpi(method,'reporter')
+    if strcmpi(opt.method,'reporter')
         % Normalize gene-set test statistics by subtracting the mean and
         % dividing by the standard deviation of the test statistics of
         % randomized gene sets of the same size.
@@ -673,12 +686,12 @@ if isnumeric(nperms)
         end
     end
     
-elseif strcmpi(nperms,'nulldist')
+elseif strcmpi(opt.nperm,'nulldist')
    
     % calculate significance based on the null distribution
     fprintf('Calculating significance based on the null distribution... ');
     
-    switch lower(method)
+    switch lower(opt.method)
         
         case 'fisher'
             
@@ -720,7 +733,7 @@ elseif strcmpi(nperms,'nulldist')
     end
     
 else
-    error('Invalid NPERMS entry. Must be an integer, or "nulldist".');
+    error('Invalid "nPerm" entry. Must be an integer, or "nullDist".');
 end
 
 fprintf('Done.\n');
@@ -757,14 +770,14 @@ end
 % GSAres = [{'GS_name', 'GS_size', 'stat_nondir', 'p_nondir', 'padj_nondir'};
 %     GSnames,num2cell([GSsizes, statvals_nondir, GS_pval_nondir, GS_padj_nondir])];
 % 
-% if ~isempty(dirs) || strcmpi(method,'gsea')
+% if ~isempty(dirs) || strcmpi(opt.method,'gsea')
 %     
 %     GSAres = [GSAres, [{'stat_mixup', 'p_mixup', 'padj_mixup', ...
 %         'stat_mixdn', 'p_mixdn', 'padj_mixdn'};
 %         num2cell([statvals_mixup, GS_pval_mixup, GS_padj_mixup, ...
 %         statvals_mixdn, GS_pval_mixdn, GS_padj_mixdn])]];
 %     
-%     if ismember(lower(method),{'reporter','stouffer','wilcoxon','mean','median','gsea'})
+%     if ismember(lower(opt.method),{'reporter','stouffer','wilcoxon','mean','median','gsea'})
 %         GSAres = [GSAres, [{'stat_distup', 'p_distup', 'padj_distup', ...
 %             'stat_distdn', 'p_distdn', 'padj_distdn'};
 %             num2cell([statvals_distup, GS_pval_distup, GS_padj_distup, ...
@@ -776,14 +789,14 @@ end
 GSAres = table(GSnames,GSsizes,statvals_nondir,GS_pval_nondir,GS_padj_nondir);
 GSAres.Properties.VariableNames = {'GS_name','GS_size','stat_nondir','p_nondir','padj_nondir'};
 
-if ~isempty(dirs) || strcmpi(method,'gsea')
+if ~isempty(dirs) || strcmpi(opt.method,'gsea')
     
     GSAres = [GSAres, table(statvals_mixup,GS_pval_mixup,GS_padj_mixup, ...
         statvals_mixdn,GS_pval_mixdn,GS_padj_mixdn)];
     GSAres.Properties.VariableNames(end-5:end) = ...
         {'stat_mixup','p_mixup','padj_mixup','stat_mixdn','p_mixdn','padj_mixdn'};
     
-    if ismember(lower(method),{'reporter','stouffer','wilcoxon','mean','median','gsea'})
+    if ismember(lower(opt.method),{'reporter','stouffer','wilcoxon','mean','median','gsea'})
         
         GSAres = [GSAres, table(statvals_distup,GS_pval_distup,GS_padj_distup, ...
             statvals_distdn,GS_pval_distdn,GS_padj_distdn)];
@@ -792,12 +805,12 @@ if ~isempty(dirs) || strcmpi(method,'gsea')
     end
 end
 
-% label table if "data_names" is provided
-if ~isempty(data_names)
-    if iscell(data_names)
-        data_names = data_names{1};
+% label table if 'dataNames' is provided
+if ~isempty(opt.datanames)
+    if iscell(opt.datanames)
+        opt.datanames = opt.datanames{1};
     end
-    GSAres.Properties.Description = data_names;
+    GSAres.Properties.Description = opt.datanames;
 end
 
 end
