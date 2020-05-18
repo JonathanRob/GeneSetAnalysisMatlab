@@ -3,11 +3,18 @@ function h = genHeatMap(data,varargin)
 %
 % Usage:
 %
-%   genHeatMap(data, ...);
+%   genHeatMap(data, 'OPTION1', 'VALUE1', 'OPTION2', 'VALUE2', ...);
+%
+%   For example, to use the Hamming distance as the cluster distance metric
+%   and a black grid color:
+%
+%   genHeatMap(data, 'clusterDist', 'hamming', 'gridColor', 'k');
+%
 %
 % Input:
 %
 %   data        Numerical matrix.
+%
 %
 % Additional Settings:
 %
@@ -51,7 +58,7 @@ function h = genHeatMap(data,varargin)
 %               will be plotted automatically.
 %
 %
-% Jonathan Robinson, 2020-02-06
+% Jonathan Robinson, 2020-05-18
 
 
 % set defaults
