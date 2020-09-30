@@ -4,6 +4,9 @@ function gsc = extractMetaboliteGSC(model,includeComps,outfile)
 % Construct a get set collection (GSC) from a genome-scale metabolic model
 % (GEM), where each gene set is a metabolite in the model.
 %
+% IMPORTANT! The function will remove the quote character ' from metabolite
+% names to avoid parsing problems in other software.
+%
 %
 % Usage:
 %
@@ -67,6 +70,9 @@ if includeComps
 else
     metNames = model.metNames;
 end
+
+% remove quote character from metabolite names
+metNames = regexprep(metNames, "'", "");
 
 % generate metabolite-gene association array
 gsc = [metNames(met_ind), model.genes(gene_ind)];
