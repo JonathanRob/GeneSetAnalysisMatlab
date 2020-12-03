@@ -18,7 +18,8 @@ function gsc = extractSubsystemGSC(model,exclude,outfile)
 %   model     Model structure containing gene-reaction associations.
 %
 %   exclude   A list of subsystems to exclude (case insensitive).
-%             For example "Artificial reactions" or "Pool reactions".
+%             For example (suggested):
+%             {'Artificial reactions','Pool reactions','Miscellaneous','Isolated'}
 %             (Opt, Default = none).
 %
 %   outfile   File name to which the GSC will be written. See the
@@ -32,8 +33,6 @@ function gsc = extractSubsystemGSC(model,exclude,outfile)
 %            (subsystems), and the second column contains the names of
 %            the genes associated with each gene set.
 %
-%
-% Jonathan Robinson, 2020-02-04
 
 
 if nargin < 2
