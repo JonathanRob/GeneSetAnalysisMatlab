@@ -74,8 +74,6 @@ for j=1:size(model.S, 2)
         end
     end
 end
-%disp(numel(gsnLeft));
-%disp(numel(gsnRight));
 gsn = [gsnLeft, gsnRight];
 
 % write to file if requested
@@ -84,5 +82,4 @@ if ~isempty(outfile)
     exportGSC(gsn,outfile);
     fprintf('Done.\n');
 end
-
 
