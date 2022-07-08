@@ -45,7 +45,7 @@ end
 % get subsystem names
 if iscell(model.subSystems{1})
     % need to convert to array of strings if it's an array of cells
-    subSystems = cellfun(@(s) s, model.subSystems);
+    subSystems = cellfun(@(s) s(1), model.subSystems);
 else
     subSystems = model.subSystems;
 end
