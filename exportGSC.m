@@ -1,4 +1,4 @@
-function [] = exportGSC(gsc,filename)
+function [] = exportGSC(gsc,filename,header)
 %exportGSC  Export a gene set collection (GSC) to a .txt or .gmt file
 %
 % Usage:
@@ -26,9 +26,19 @@ function [] = exportGSC(gsc,filename)
 %             will also contain a header line with column tiles "gene set"
 %             and "gene".
 %
+%   header    An Nx2 cell array of strings to be used as column headers for
+%             the output file if the filename extension is '.txt'. Input
+%             empty brackets ([]) for no header.
+%             (Opt, Default = {'gene set','gene'} if filename extension is
+%             '.txt', otherwise Default is no header).
+%
 %
 % Jonathan Robinson, 2020-02-04
 
+
+if nargin < 3
+    header = {'gene set','gene'};
+end
 
 % check filename extension
 filetype = 'gmt';
@@ -44,7 +54,6 @@ end
 
 % write to file
 if strcmp(filetype,'txt')
-    header = {'gene set','gene'};
     writecell([header; gsc], filename, 'Delimiter', '\t');
 else
     % compress associated genes into nested cells
