@@ -8,7 +8,7 @@ function gsn = extractMetaboliteGSN(model,includeComps,outfile)
 %
 % Usage:
 %
-%   gsc = extractMetaboliteGSN(model,includeComps,outfile);
+%   gsn = extractMetaboliteGSN(model,includeComps,outfile);
 %
 %
 % Input:
@@ -19,7 +19,7 @@ function gsn = extractMetaboliteGSN(model,includeComps,outfile)
 %                 include compartment.
 %                 (opt, Default = FALSE)
 %
-%   outfile       File name to which the GSC will be written. See the
+%   outfile       File name to which the GSN will be written. See the
 %                 "exportGSC" function for more detail. 
 %                 (opt, Default = No file will be written)
 %
@@ -62,24 +62,22 @@ else
 end
 
 % generate metabolite geneset-geneset interaction array
-gsnLeft = {};
-gsnRight = {};
-for j=1:size(model.S, 2)
-    posInd = find(model.S(:,j)>0);
-    negInd = find(model.S(:,j)<0);
-    for i = 1:length(negInd)
-        for k = 1:length(posInd)
-            gsnLeft = [gsnLeft; metNames{negInd(i)}];
-            gsnRight = [gsnRight; metNames{posInd(k)}];
-        end
-    end
-end
-gsn = [gsnLeft, gsnRight];
+Sbin = (model.S ~= 0);
+Smets = triu(Sbin*Sbin' ~= 0) - eye(length(metNames));
+[indx1, indx2] = find(Smets);
+gsn = metNames([indx1, indx2]);
+
+% remove duplicate and self-interactions
+uniqMetNames = unique(metNames);
+[~,gsn_indx] = ismember(gsn, uniqMetNames);
+gsn_indx = unique(sort(gsn_indx, 2), 'rows');
+gsn_indx(gsn_indx(:,1) == gsn_indx(:,2), :) = [];
+gsn = uniqMetNames(gsn_indx);
 
 % write to file if requested
 if ~isempty(outfile)
     fprintf('Writing GSN to file... ');
-    exportGSC(gsn,outfile);
+    exportGSC(gsn,outfile,[]);
     fprintf('Done.\n');
 end
 
