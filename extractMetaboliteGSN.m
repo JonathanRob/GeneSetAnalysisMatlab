@@ -19,8 +19,10 @@ function gsn = extractMetaboliteGSN(model,includeComps,outfile,uniquePairs)
 %                 include compartment.
 %                 (opt, Default = FALSE)
 %
-%   outfile       File name to which the GSN will be written. See the
-%                 "exportGSC" function for more detail. 
+%   outfile       File name to which the GSN will be written. The file name
+%                 must use the ".txt" extension, or no extension at all (in
+%                 which case ".txt" will be appended to the file name). 
+%                 See the "exportGSC" function for more detail. 
 %                 (opt, Default = No file will be written)
 %
 %   uniquePairs   Logical indicating whether only unique geneset-geneset
@@ -49,6 +51,13 @@ end
 
 if nargin < 3
     outfile = [];
+elseif contains(outfile, '.')
+    if ~endsWith(outfile, '.txt')
+        error('"outfile" must include the ".txt" extension or no extension at all.');
+    end
+else
+    outfile = strcat(outfile, '.txt');
+end
 
 if nargin < 4
     uniquePairs = false;
