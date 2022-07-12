@@ -1,4 +1,4 @@
-function gsn = extractMetaboliteGSN(model,includeComps,outfile)
+function gsn = extractMetaboliteGSN(model,includeComps,outfile,uniquePairs)
 % extractMetaboliteGSN  Extract metabolite geneset-geneset interaction file
 % from a GEM.
 %
@@ -23,6 +23,17 @@ function gsn = extractMetaboliteGSN(model,includeComps,outfile)
 %                 "exportGSC" function for more detail. 
 %                 (opt, Default = No file will be written)
 %
+%   uniquePairs   Logical indicating whether only unique geneset-geneset
+%                 interaction pairs should be returned (true), or if the
+%                 pair should be duplicated for every interaction present
+%                 (i.e., metabolite-metabolite pairs duplicated for every
+%                 reaction in which both metabolites appear). Note that
+%                 only one direction of the interaction is counted; e.g.,
+%                 if metA and metB occur together in one reaction, this
+%                 function will not return both metA-metB and metB-metA
+%                 pairs.
+%                 (opt, Default = FALSE)
+%
 %
 % Output:
 %
@@ -32,12 +43,15 @@ function gsn = extractMetaboliteGSN(model,includeComps,outfile)
 %
 
 
-
 if nargin < 2 || isempty(includeComps)
     includeComps = false;
 end
+
 if nargin < 3
     outfile = [];
+
+if nargin < 4
+    uniquePairs = false;
 end
 
 % add compartments to metabolite names if requested
@@ -70,7 +84,9 @@ gsn = metNames([indx1, indx2]);
 % remove duplicate and self-interactions
 uniqMetNames = unique(metNames);
 [~,gsn_indx] = ismember(gsn, uniqMetNames);
-gsn_indx = unique(sort(gsn_indx, 2), 'rows');
+if ( uniquePairs )
+    gsn_indx = unique(sort(gsn_indx, 2), 'rows');
+end
 gsn_indx(gsn_indx(:,1) == gsn_indx(:,2), :) = [];
 gsn = uniqMetNames(gsn_indx);
 
